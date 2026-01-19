@@ -8,6 +8,8 @@ services:
   postgres:
     container_name: jain_food-postgres
     image: postgis/postgis:15-3.4
+    env_file:
+      - ../.env
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
@@ -26,6 +28,8 @@ services:
   redis:
     container_name: jain_food-redis
     image: redis:7
+    env_file:
+      - ../.env
     # Expose for local debugging
     ports:
       - "6379:6379"
@@ -39,6 +43,8 @@ services:
     container_name: jain_food-minio
     image: minio/minio
     command: server /data --console-address ":9001"
+    env_file:
+      - ../.env
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
@@ -68,7 +74,7 @@ services:
       S3_ENDPOINT: http://minio:9000
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
-      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
       S3_BUCKET: ${S3_BUCKET:-jain-food-media}
       GIN_MODE: debug
     ports:

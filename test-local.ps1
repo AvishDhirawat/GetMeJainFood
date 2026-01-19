@@ -139,7 +139,7 @@ if ($allPassed) {
     Write-Host "1. Make sure Docker Desktop is running" -ForegroundColor Gray
     Write-Host "2. Create .env file: Copy-Item .env.example .env" -ForegroundColor Gray
     Write-Host "3. Run '.\run-local.ps1' to start all services" -ForegroundColor Gray
-    Write-Host "3. Wait for services to be healthy (30-60 seconds)" -ForegroundColor Gray
-    Write-Host "4. Run this test again: '.\test-local.ps1'" -ForegroundColor Gray
+    Write-Host "4. Wait for services to be healthy (30-60 seconds)" -ForegroundColor Gray
+    Write-Host "5. Run this test again: '.\test-local.ps1'" -ForegroundColor Gray
 }
 Write-Host ""

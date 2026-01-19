@@ -24,7 +24,7 @@ $envFile = Join-Path $PSScriptRoot ".env"
 if (-not (Test-Path $envFile)) {
     Write-Host "ERROR: .env file not found!" -ForegroundColor Red
     Write-Host "Please create a .env file from the example:" -ForegroundColor Yellow
-    Write-Host "  cp .env.example .env" -ForegroundColor White
+    Write-Host "  Copy-Item .env.example .env" -ForegroundColor White
     Write-Host "Then edit .env with your configuration values." -ForegroundColor Yellow
     Set-Location -Path $PSScriptRoot
     exit 1
