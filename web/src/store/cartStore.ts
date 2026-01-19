@@ -10,6 +10,7 @@ interface CartState {
   // Computed
   totalItems: () => number
   totalAmount: () => number
+  getTotal: () => number
 
   // Actions
   addItem: (item: MenuItem, providerId: string, providerName: string) => void
@@ -98,6 +99,11 @@ export const useCartStore = create<CartState>()(
       canAddItem: (providerId: string) => {
         const state = get()
         return !state.providerId || state.providerId === providerId
+      },
+
+      // Alias for debug panel
+      getTotal: () => {
+        return get().totalAmount()
       },
     }),
     {

@@ -162,7 +162,7 @@ Decision: Go chosen for performance, concurrency, and team preference; admin UI 
 ### Prerequisites
 
 - **Docker Desktop** - Required for all modes
-- **Go 1.23+** - Required for local mode
+- **Go 1.20+** - Required for local mode
 - **Node.js 20+** - Required for local mode
 
 ### Available Commands

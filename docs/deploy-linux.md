@@ -20,7 +20,7 @@ This guide covers secure deployment of the Jain Food App on Linux servers.
 
 ### Local Development
 - Docker Desktop
-- Go 1.23+
+- Go 1.20+
 - Node.js 20+
 - Git
 

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { logger } from '../utils/logger'
 
 interface LocationState {
   lat: number | null
@@ -24,13 +25,16 @@ export const useLocationStore = create<LocationState>()(
       error: null,
 
       setLocation: (lat: number, lng: number, address?: string) => {
+        logger.info('LocationStore', 'Location set manually', { lat, lng, address })
         set({ lat, lng, address: address || null, error: null })
       },
 
       getCurrentLocation: async () => {
+        logger.info('LocationStore', 'Getting current location')
         set({ isLoading: true, error: null })
 
         if (!navigator.geolocation) {
+          logger.warn('LocationStore', 'Geolocation not supported, using default')
           set({
             isLoading: false,
             error: 'Geolocation is not supported by this browser',
@@ -45,6 +49,7 @@ export const useLocationStore = create<LocationState>()(
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             const { latitude, longitude } = position.coords
+            logger.info('LocationStore', 'Location obtained', { latitude, longitude })
 
             // Try to get address from coordinates (reverse geocoding)
             try {
@@ -55,13 +60,15 @@ export const useLocationStore = create<LocationState>()(
               const data = await response.json()
               const address = data.display_name?.split(',').slice(0, 3).join(', ') || 'Current Location'
 
+              logger.info('LocationStore', 'Address resolved', { address })
               set({
                 lat: latitude,
                 lng: longitude,
                 address,
                 isLoading: false,
               })
-            } catch {
+            } catch (err) {
+              logger.warn('LocationStore', 'Reverse geocoding failed', { error: err })
               set({
                 lat: latitude,
                 lng: longitude,
@@ -70,7 +77,8 @@ export const useLocationStore = create<LocationState>()(
               })
             }
           },
-          () => {
+          (error) => {
+            logger.warn('LocationStore', 'Geolocation error, using default', { error: error.message })
             set({
               isLoading: false,
               error: 'Unable to retrieve your location',

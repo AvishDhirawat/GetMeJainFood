@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"jainfood/internal/media"
 	"jainfood/internal/menus"
 	"jainfood/internal/middleware"
+	"jainfood/internal/monitoring"
 	"jainfood/internal/orders"
 	"jainfood/internal/providers"
 	"jainfood/internal/redisclient"
@@ -37,7 +39,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create logger: %v", err)
 	}
-	defer logger.Sync()
+	defer func() {
+		// Ignore sync error as it's common with stdout/stderr
+		_ = logger.Sync()
+	}()
 
 	// Connect to database
 	ctx := context.Background()
@@ -72,13 +77,36 @@ func main() {
 	// Setup Gin router
 	r := gin.New()
 	r.Use(gin.Recovery())
-	r.Use(middleware.LoggingMiddleware(logger))
+	r.Use(monitoring.MetricsMiddleware())
+	r.Use(monitoring.RequestLogger(logger))
 	r.Use(middleware.CORSMiddleware())
 	r.Use(middleware.SecureHeadersMiddleware())
 
-	// Health check
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok", "timestamp": time.Now().Unix()})
+	// App version
+	appVersion := os.Getenv("APP_VERSION")
+	if appVersion == "" {
+		appVersion = "1.0.0-dev"
+	}
+
+	// Health and monitoring endpoints
+	r.GET("/health", monitoring.HealthHandler(appVersion))
+	r.GET("/metrics", monitoring.MetricsHandler())
+	r.GET("/debug", monitoring.DebugHandler())
+	r.GET("/ready", func(c *gin.Context) {
+		// Check database
+		if err := db.Ping(ctx); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"ready": false, "error": "database unavailable"})
+			return
+		}
+		// Check Redis
+		if err := redisclient.Ping(ctx); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"ready": false, "error": "redis unavailable"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"ready": true})
+	})
+	r.GET("/live", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"alive": true})
 	})
 
 	// API v1 routes

@@ -8,7 +8,7 @@
 # - MinIO (optional - for file uploads)
 #
 # Prerequisites:
-#   - Go 1.23+
+#   - Go 1.20+
 #   - Node.js 20+
 #   - PostgreSQL 15+ with PostGIS
 #   - Redis 7+

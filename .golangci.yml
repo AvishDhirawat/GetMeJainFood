@@ -1,0 +1,20 @@
+# golangci-lint configuration for JainFood API
+# https://golangci-lint.run/usage/configuration/
+
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+issues:
+
+  max-issues-per-linter: 50
+  max-same-issues: 5

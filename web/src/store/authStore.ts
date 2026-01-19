@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User } from '../types'
 import { userApi } from '../api/client'
+import { logger } from '../utils/logger'
 
 interface AuthState {
   token: string | null
@@ -26,6 +27,7 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
 
       login: (token: string, user: User) => {
+        logger.info('AuthStore', 'User logged in', { userId: user.id, role: user.role })
         set({
           token,
           user,
@@ -34,6 +36,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
+        logger.info('AuthStore', 'User logged out')
         set({
           token: null,
           user: null,
@@ -44,17 +47,21 @@ export const useAuthStore = create<AuthState>()(
 
       loadFromStorage: () => {
         const state = get()
+        logger.debug('AuthStore', 'Loading from storage', { hasToken: !!state.token })
         if (state.token && !state.user) {
           state.fetchUser()
         }
       },
 
       fetchUser: async () => {
+        logger.debug('AuthStore', 'Fetching user')
         set({ isLoading: true })
         try {
           const user = await userApi.getMe()
+          logger.info('AuthStore', 'User fetched successfully', { userId: user.id })
           set({ user, isAuthenticated: true, isLoading: false })
-        } catch {
+        } catch (err) {
+          logger.error('AuthStore', 'Failed to fetch user', { error: err })
           set({ token: null, user: null, isAuthenticated: false, isLoading: false })
         }
       },
@@ -62,6 +69,7 @@ export const useAuthStore = create<AuthState>()(
       updateUser: (updates: Partial<User>) => {
         const currentUser = get().user
         if (currentUser) {
+          logger.info('AuthStore', 'User updated', { updates })
           set({ user: { ...currentUser, ...updates } })
         }
       },

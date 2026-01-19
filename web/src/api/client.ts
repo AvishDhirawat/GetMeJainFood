@@ -1,5 +1,6 @@
-import axios, { AxiosError, AxiosInstance } from 'axios'
+import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '../store/authStore'
+import { logger } from '../utils/logger'
 import type {
   User,
   Provider,
@@ -33,28 +34,58 @@ const API_BASE_URL = '/v1'
 // Set to true for development without backend, false to use real API
 const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API === 'true'
 
+logger.info('ApiClient', 'Initialized', { mockMode: USE_MOCK_API, baseUrl: API_BASE_URL })
+
 // Create axios instance
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // 30 second timeout
 })
 
-// Request interceptor - add auth token
-api.interceptors.request.use((config) => {
+// Request interceptor - add auth token and logging
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = useAuthStore.getState().token
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
+
+  // Add request ID for tracking
+  const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  config.headers['X-Request-ID'] = requestId
+
+  logger.debug('ApiClient', `Request: ${config.method?.toUpperCase()} ${config.url}`, {
+    requestId,
+    params: config.params,
+    hasAuth: !!token,
+  })
+
   return config
 })
 
-// Response interceptor - handle errors
+// Response interceptor - handle errors and logging
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    logger.debug('ApiClient', `Response: ${response.status} ${response.config.url}`, {
+      requestId: response.config.headers['X-Request-ID'],
+      status: response.status,
+    })
+    return response
+  },
   (error: AxiosError) => {
+    const requestId = error.config?.headers?.['X-Request-ID']
+
+    logger.error('ApiClient', `Error: ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
+      requestId,
+      status: error.response?.status,
+      message: error.message,
+      data: error.response?.data,
+    })
+
     if (error.response?.status === 401) {
+      logger.warn('ApiClient', 'Unauthorized - logging out user')
       useAuthStore.getState().logout()
       window.location.href = '/login'
     }

@@ -49,13 +49,13 @@ sudo $PKG_MANAGER update -y
 # INSTALL GO
 # =============================================================================
 echo ""
-echo -e "${YELLOW}[2/6] Installing Go 1.23...${NC}"
+echo -e "${YELLOW}[2/6] Installing Go 1.20...${NC}"
 
 if command -v go &> /dev/null; then
     GO_VERSION=$(go version | grep -oP '\d+\.\d+' | head -1)
     echo -e "${GREEN}Go already installed (version $GO_VERSION)${NC}"
 else
-    GO_VERSION="1.23.4"
+    GO_VERSION="1.20.14"
     wget -q "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -O /tmp/go.tar.gz
     sudo rm -rf /usr/local/go
     sudo tar -C /usr/local -xzf /tmp/go.tar.gz
@@ -156,7 +156,7 @@ echo "  Installation Complete!               "
 echo -e "========================================${NC}"
 echo ""
 echo "Installed:"
-echo -e "  ${GREEN}✓${NC} Go $(go version | grep -oP 'go\d+\.\d+\.\d+' || echo '1.23')"
+echo -e "  ${GREEN}✓${NC} Go $(go version | grep -oP 'go\d+\.\d+\.\d+' || echo '1.20')"
 echo -e "  ${GREEN}✓${NC} Node.js $(node --version)"
 echo -e "  ${GREEN}✓${NC} PostgreSQL with PostGIS"
 echo -e "  ${GREEN}✓${NC} Redis"
