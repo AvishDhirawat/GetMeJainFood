@@ -1,0 +1,979 @@
+openapi: 3.0.3
+info:
+  title: Jain Food App API
+  description: |
+    Two-sided Jain-specific food discovery and ordering platform API.
+    Supports buyers and providers with strictly Jain dietary compliance,
+    menu transparency, and OTP-based order confirmation.
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: http://localhost:8080/v1
+    description: Local development server
+
+tags:
+  - name: Auth
+    description: Authentication and OTP operations
+  - name: Users
+    description: User profile management
+  - name: Providers
+    description: Food provider operations
+  - name: Menus
+    description: Menu management
+  - name: Menu Items
+    description: Menu item operations
+  - name: Search
+    description: Location-based search
+  - name: Orders
+    description: Order management
+  - name: Chat
+    description: Real-time chat
+  - name: Media
+    description: Media upload/download
+
+paths:
+  /auth/send-otp:
+    post:
+      tags: [Auth]
+      summary: Send OTP to phone number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone:
+                  type: string
+                  example: "+919876543210"
+      responses:
+        '200':
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  otp:
+                    type: string
+                    description: Only returned in development mode
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/verify-otp:
+    post:
+      tags: [Auth]
+      summary: Verify OTP and get JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, otp]
+              properties:
+                phone:
+                  type: string
+                otp:
+                  type: string
+                role:
+                  type: string
+                  enum: [buyer, provider]
+                  default: buyer
+      responses:
+        '200':
+          description: OTP verified, JWT returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  token:
+                    type: string
+                  user_id:
+                    type: string
+                  is_new:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/me:
+    get:
+      tags: [Users]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+    put:
+      tags: [Users]
+      summary: Update user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                preferences:
+                  type: object
+      responses:
+        '200':
+          description: Profile updated
+    delete:
+      tags: [Users]
+      summary: Delete user account
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Account deleted
+
+  /providers:
+    get:
+      tags: [Providers]
+      summary: List providers
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of providers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Provider'
+    post:
+      tags: [Providers]
+      summary: Create provider profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [business_name, address, lat, lng]
+              properties:
+                business_name:
+                  type: string
+                address:
+                  type: string
+                lat:
+                  type: number
+                lng:
+                  type: number
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Provider created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Provider'
+
+  /providers/{id}:
+    get:
+      tags: [Providers]
+      summary: Get provider by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Provider details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Provider'
+    put:
+      tags: [Providers]
+      summary: Update provider
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Provider'
+      responses:
+        '200':
+          description: Provider updated
+
+  /providers/{id}/verify:
+    post:
+      tags: [Providers]
+      summary: Verify provider (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                verified:
+                  type: boolean
+      responses:
+        '200':
+          description: Verification status updated
+
+  /menus:
+    post:
+      tags: [Menus]
+      summary: Create menu
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider_id, name]
+              properties:
+                provider_id:
+                  type: string
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Menu created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Menu'
+
+  /menus/{id}:
+    get:
+      tags: [Menus]
+      summary: Get menu by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Menu details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Menu'
+
+  /menus/provider/{provider_id}:
+    get:
+      tags: [Menus]
+      summary: Get menus by provider
+      parameters:
+        - name: provider_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of menus
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Menu'
+
+  /menu-items:
+    post:
+      tags: [Menu Items]
+      summary: Create menu item
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [menu_id, name, price]
+              properties:
+                menu_id:
+                  type: string
+                name:
+                  type: string
+                price:
+                  type: number
+                ingredients:
+                  type: array
+                  items:
+                    type: string
+                is_jain:
+                  type: boolean
+                  default: true
+                availability:
+                  type: boolean
+                  default: true
+                image_url:
+                  type: string
+      responses:
+        '201':
+          description: Item created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+
+  /menu-items/{id}:
+    get:
+      tags: [Menu Items]
+      summary: Get menu item by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Item details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+
+  /menu-items/{id}/availability:
+    patch:
+      tags: [Menu Items]
+      summary: Toggle item availability
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                available:
+                  type: boolean
+      responses:
+        '200':
+          description: Availability updated
+
+  /search/providers:
+    get:
+      tags: [Search]
+      summary: Search nearby providers
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: radius
+          in: query
+          schema:
+            type: number
+            default: 5000
+          description: Search radius in meters
+        - name: tags
+          in: query
+          schema:
+            type: string
+          description: Comma-separated tags (e.g., sattvic,pure-jain)
+        - name: min_rating
+          in: query
+          schema:
+            type: number
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                    - $ref: '#/components/schemas/Provider'
+                    - type: object
+                      properties:
+                        distance_meters:
+                          type: number
+
+  /search/items:
+    get:
+      tags: [Search]
+      summary: Search menu items
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+        - name: radius
+          in: query
+          schema:
+            type: number
+            default: 5000
+        - name: q
+          in: query
+          schema:
+            type: string
+          description: Search query
+        - name: jain_only
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: available_only
+          in: query
+          schema:
+            type: boolean
+            default: true
+        - name: tags
+          in: query
+          schema:
+            type: string
+        - name: min_rating
+          in: query
+          schema:
+            type: number
+        - name: price_max
+          in: query
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MenuItem'
+
+  /orders:
+    post:
+      tags: [Orders]
+      summary: Create order
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider_id, items, total]
+              properties:
+                provider_id:
+                  type: string
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      item_id:
+                        type: string
+                      qty:
+                        type: integer
+                      price:
+                        type: number
+                total:
+                  type: number
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order_id:
+                    type: string
+                  order_code:
+                    type: string
+                  otp:
+                    type: string
+                    description: Only in development
+
+  /orders/code/{code}:
+    get:
+      tags: [Orders]
+      summary: Get order by code
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order_id:
+                    type: string
+                  order_code:
+                    type: string
+
+  /orders/{id}/confirm-otp:
+    post:
+      tags: [Orders]
+      summary: Confirm order with OTP
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [otp]
+              properties:
+                otp:
+                  type: string
+      responses:
+        '200':
+          description: Order confirmed
+
+  /orders/{id}/cancel:
+    post:
+      tags: [Orders]
+      summary: Cancel order
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order cancelled
+
+  /orders/{id}/complete:
+    post:
+      tags: [Orders]
+      summary: Complete order
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order completed
+
+  /chat/ws:
+    get:
+      tags: [Chat]
+      summary: WebSocket chat endpoint
+      parameters:
+        - name: chat_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '101':
+          description: WebSocket upgrade
+
+  /chat:
+    post:
+      tags: [Chat]
+      summary: Create chat for order
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [order_id, participants]
+              properties:
+                order_id:
+                  type: string
+                participants:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Chat created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+
+  /chat/{id}/messages:
+    get:
+      tags: [Chat]
+      summary: Get chat messages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+
+  /media/upload-url:
+    post:
+      tags: [Media]
+      summary: Get pre-signed upload URL
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [folder, content_type, file_name]
+              properties:
+                folder:
+                  type: string
+                  enum: [providers, items]
+                content_type:
+                  type: string
+                file_name:
+                  type: string
+      responses:
+        '200':
+          description: Upload URL generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  upload_url:
+                    type: string
+                  object_key:
+                    type: string
+                  expires_in_seconds:
+                    type: integer
+
+  /media/download-url:
+    post:
+      tags: [Media]
+      summary: Get pre-signed download URL
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [object_key]
+              properties:
+                object_key:
+                  type: string
+      responses:
+        '200':
+          description: Download URL generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  download_url:
+                    type: string
+                  expires_in_seconds:
+                    type: integer
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        phone:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [buyer, provider, admin]
+        preferences:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+    Provider:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        business_name:
+          type: string
+        address:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        verified:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        rating:
+          type: number
+        created_at:
+          type: string
+          format: date-time
+
+    Menu:
+      type: object
+      properties:
+        id:
+          type: string
+        provider_id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    MenuItem:
+      type: object
+      properties:
+        id:
+          type: string
+        menu_id:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+        ingredients:
+          type: array
+          items:
+            type: string
+        is_jain:
+          type: boolean
+        availability:
+          type: boolean
+        image_url:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+        order_code:
+          type: string
+        buyer_id:
+          type: string
+        provider_id:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+        total_estimate:
+          type: number
+        status:
+          type: string
+          enum: [CREATED, PENDING_PROVIDER_ACK, CONFIRMED, COMPLETED, CANCELLED]
+        created_at:
+          type: string
+          format: date-time
+
+    Chat:
+      type: object
+      properties:
+        id:
+          type: string
+        order_id:
+          type: string
+        participants:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        chat_id:
+          type: string
+        sender_id:
+          type: string
+        content:
+          type: string
+        meta:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
