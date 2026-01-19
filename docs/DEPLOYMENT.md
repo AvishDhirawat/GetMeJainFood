@@ -707,11 +707,11 @@ kubectl scale deployment jain-food-api --replicas=5 -n jain-food
 # Generate JWT secret (32+ characters)
 openssl rand -hex 32
 
-# Or using Go
-go run -c 'package main; import ("crypto/rand"; "encoding/hex"; "fmt"); func main() { b := make([]byte, 32); rand.Read(b); fmt.Println(hex.EncodeToString(b)) }'
-
 # Or using Python
 python3 -c "import secrets; print(secrets.token_hex(32))"
+
+# Or using Node.js
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 ### Database Security
