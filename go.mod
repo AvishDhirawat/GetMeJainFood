@@ -2,8 +2,6 @@ module jainfood
 
 go 1.23
 
-toolchain go1.24.11
-
 require (
 	github.com/aws/aws-sdk-go-v2 v1.24.0
 	github.com/aws/aws-sdk-go-v2/config v1.26.1
