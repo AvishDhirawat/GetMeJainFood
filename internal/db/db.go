@@ -2,7 +2,6 @@ package db
 
 import (
     "context"
-    "log"
     "time"
 
     "github.com/jackc/pgx/v5/pgxpool"
