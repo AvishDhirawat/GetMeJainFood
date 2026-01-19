@@ -1,12 +1,22 @@
 # Test script to verify local setup is working
 # Run this after starting the application with run-local.ps1
 
+$ProjectRoot = $PSScriptRoot
+$envFile = Join-Path $ProjectRoot ".env"
+
 Write-Host "========================================"
 Write-Host "  GetMeJainFood - Local Setup Test     "
 Write-Host "========================================"
 Write-Host ""
 
 $allPassed = $true
+
+# Check if .env file exists
+if (-not (Test-Path $envFile)) {
+    Write-Host "WARNING: .env file not found. Some tests may fail." -ForegroundColor Yellow
+    Write-Host "Create one with: Copy-Item .env.example .env" -ForegroundColor Gray
+    Write-Host ""
+}
 
 # Test 1: Check Docker services
 Write-Host "[Test 1/5] Checking Docker services..." -ForegroundColor Yellow
@@ -19,14 +29,14 @@ try {
     Push-Location $PSScriptRoot\docker
 
     # Check if containers are running
-    $postgresStatus = docker-compose ps postgres --format json 2>$null | ConvertFrom-Json
-    $redisStatus = docker-compose ps redis --format json 2>$null | ConvertFrom-Json
+    $postgresStatus = docker compose --env-file $envFile ps postgres --format json 2>$null | ConvertFrom-Json
+    $redisStatus = docker compose --env-file $envFile ps redis --format json 2>$null | ConvertFrom-Json
 
     Pop-Location
 
     Write-Host "  Docker is running" -ForegroundColor Green
 } catch {
-    Write-Host "  FAILED: Docker is not running or docker-compose services not started" -ForegroundColor Red
+    Write-Host "  FAILED: Docker is not running or docker compose services not started" -ForegroundColor Red
     Write-Host "  Run '.\run-local.ps1' first to start services" -ForegroundColor Gray
     $allPassed = $false
 }
@@ -36,7 +46,7 @@ Write-Host ""
 Write-Host "[Test 2/5] Testing PostgreSQL connection..." -ForegroundColor Yellow
 try {
     Push-Location $PSScriptRoot\docker
-    $pgReady = docker-compose exec -T postgres pg_isready -U postgres 2>&1
+    $pgReady = docker compose --env-file $envFile exec -T postgres pg_isready -U postgres 2>&1
     Pop-Location
 
     if ($LASTEXITCODE -eq 0) {
@@ -54,7 +64,7 @@ Write-Host ""
 Write-Host "[Test 3/5] Testing Redis connection..." -ForegroundColor Yellow
 try {
     Push-Location $PSScriptRoot\docker
-    $redisReady = docker-compose exec -T redis redis-cli ping 2>&1
+    $redisReady = docker compose --env-file $envFile exec -T redis redis-cli ping 2>&1
     Pop-Location
 
     if ($LASTEXITCODE -eq 0 -and $redisReady -match "PONG") {
@@ -116,7 +126,7 @@ if ($allPassed) {
     Write-Host "  API:      http://localhost:8080" -ForegroundColor Gray
     Write-Host "  Health:   http://localhost:8080/health" -ForegroundColor Gray
     Write-Host "  Frontend: http://localhost:5173 (dev) or http://localhost:3000 (docker)" -ForegroundColor Gray
-    Write-Host "  MinIO:    http://localhost:9001 (minioadmin/minioadmin)" -ForegroundColor Gray
+    Write-Host "  MinIO:    http://localhost:9001 (credentials in .env)" -ForegroundColor Gray
     Write-Host ""
     Write-Host "Try the API:" -ForegroundColor White
     Write-Host '  Invoke-RestMethod -Uri "http://localhost:8080/health"' -ForegroundColor Gray
@@ -127,8 +137,9 @@ if ($allPassed) {
     Write-Host ""
     Write-Host "Steps to fix:" -ForegroundColor Yellow
     Write-Host "1. Make sure Docker Desktop is running" -ForegroundColor Gray
-    Write-Host "2. Run '.\run-local.ps1' to start all services" -ForegroundColor Gray
-    Write-Host "3. Wait for services to be healthy (30-60 seconds)" -ForegroundColor Gray
-    Write-Host "4. Run this test again: '.\test-local.ps1'" -ForegroundColor Gray
+    Write-Host "2. Create .env file: Copy-Item .env.example .env" -ForegroundColor Gray
+    Write-Host "3. Run '.\run-local.ps1' to start all services" -ForegroundColor Gray
+    Write-Host "4. Wait for services to be healthy (30-60 seconds)" -ForegroundColor Gray
+    Write-Host "5. Run this test again: '.\test-local.ps1'" -ForegroundColor Gray
 }
 Write-Host ""

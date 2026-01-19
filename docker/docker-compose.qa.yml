@@ -1,41 +1,81 @@
 
 # QA environment - mirrors production with test data and debugging enabled
+# Usage: docker compose --env-file ../.env -f docker-compose.qa.yml up -d
+
+name: jain-food
+
 services:
   postgres:
+    container_name: jain_food-postgres
+    image: postgis/postgis:15-3.4
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-jain_food}
     volumes:
       - pgdata-qa:/var/lib/postgresql/data
       - ../migrations:/docker-entrypoint-initdb.d:ro
     # No external port exposure in QA
     ports: []
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-jain_food}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
+    container_name: jain_food-redis
+    image: redis:7
     ports: []
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   minio:
+    container_name: jain_food-minio
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?S3_ACCESS_KEY is required}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
     ports:
       - "9001:9001"  # Only console for QA testing
     volumes:
       - miniodata-qa:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   api:
+    container_name: jain_food-api
     build:
       context: ..
       dockerfile: Dockerfile
     environment:
       PORT: 8080
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/jain_food?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-jain_food}?sslmode=disable
       REDIS_ADDR: redis:6379
-      # Use different secrets for QA - should be set via CI/CD secrets
-      JWT_SECRET: ${JWT_SECRET:-qa-jwt-secret-change-me}
-      OTP_SECRET: ${OTP_SECRET:-qa-otp-secret-change-me}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      OTP_SECRET: ${OTP_SECRET:?OTP_SECRET is required}
       S3_ENDPOINT: http://minio:9000
-      S3_REGION: us-east-1
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
-      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
-      S3_BUCKET: jain-food-media-qa
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY is required}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
+      S3_BUCKET: ${S3_BUCKET:-jain-food-media-qa}
       GIN_MODE: release
     ports:
       - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -48,6 +88,7 @@ services:
         max-file: "5"
 
   web:
+    container_name: jain_food-web
     build:
       context: ../web
       dockerfile: Dockerfile
@@ -55,6 +96,8 @@ services:
         VITE_API_URL: ${API_URL:-http://localhost:8080}
     ports:
       - "3000:80"
+    depends_on:
+      - api
     deploy:
       resources:
         limits:

@@ -1,6 +1,19 @@
+# Docker Compose configuration for JainFood
+#
+# Usage:
+#   docker compose --env-file ../.env up -d
+#
+# Or copy .env to docker directory:
+#   cp ../.env .env && docker compose up -d
+
+name: jain-food
+
 services:
   postgres:
+    container_name: jain_food-postgres
     image: postgis/postgis:15-3.4
+    env_file:
+      - ../.env
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
@@ -11,12 +24,13 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ../migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d jain_food"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-jain_food}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   redis:
+    container_name: jain_food-redis
     image: redis:7
     ports:
       - "6379:6379"
@@ -27,11 +41,14 @@ services:
       retries: 5
 
   minio:
+    container_name: jain_food-minio
     image: minio/minio
     command: server /data --console-address ":9001"
+    env_file:
+      - ../.env
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -44,22 +61,25 @@ services:
       retries: 5
 
   api:
+    container_name: jain_food-api
     build:
       context: ..
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "${PORT:-8080}:8080"
+    env_file:
+      - ../.env
     environment:
       PORT: 8080
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/jain_food?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-jain_food}?sslmode=disable
       REDIS_ADDR: redis:6379
-      JWT_SECRET: your-super-secret-jwt-key-change-in-production
-      OTP_SECRET: your-super-secret-otp-key-change-in-production
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      OTP_SECRET: ${OTP_SECRET:?OTP_SECRET is required}
       S3_ENDPOINT: http://minio:9000
-      S3_REGION: us-east-1
-      S3_ACCESS_KEY: minioadmin
-      S3_SECRET_KEY: minioadmin
-      S3_BUCKET: jain-food-media
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-jain-food-media}
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,6 +90,7 @@ services:
     restart: unless-stopped
 
   web:
+    container_name: jain_food-web
     build:
       context: ../web
       dockerfile: Dockerfile

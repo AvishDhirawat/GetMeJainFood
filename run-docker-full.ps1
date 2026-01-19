@@ -14,9 +14,20 @@ Set-Location -Path $PSScriptRoot\docker
 
 if ($Down) {
     Write-Host "Stopping all services..." -ForegroundColor Yellow
-    docker-compose down
+    docker compose --env-file ../.env down
     Write-Host "All services stopped!" -ForegroundColor Green
     exit 0
+}
+
+# Check if .env file exists
+$envFile = Join-Path $PSScriptRoot ".env"
+if (-not (Test-Path $envFile)) {
+    Write-Host "ERROR: .env file not found!" -ForegroundColor Red
+    Write-Host "Please create a .env file from the example:" -ForegroundColor Yellow
+    Write-Host "  Copy-Item .env.example .env" -ForegroundColor White
+    Write-Host "Then edit .env with your configuration values." -ForegroundColor Yellow
+    Set-Location -Path $PSScriptRoot
+    exit 1
 }
 
 # Check if Docker is running
@@ -31,9 +42,9 @@ Write-Host ""
 
 if ($Build) {
     Write-Host "Building images (this may take a few minutes)..." -ForegroundColor Yellow
-    docker-compose up --build -d
+    docker compose --env-file ../.env up --build -d
 } else {
-    docker-compose up -d
+    docker compose --env-file ../.env up -d
 }
 
 if ($LASTEXITCODE -ne 0) {
@@ -50,12 +61,12 @@ $attempt = 0
 do {
     $attempt++
     Start-Sleep -Seconds 2
-    $healthy = docker-compose ps --format json 2>&1 | ConvertFrom-Json | Where-Object { $_.State -eq "running" }
+    $healthy = docker compose --env-file ../.env ps --format json 2>&1 | ConvertFrom-Json | Where-Object { $_.State -eq "running" }
     $runningCount = ($healthy | Measure-Object).Count
     Write-Host "  Attempt $attempt/$maxAttempts - $runningCount services running..."
 
     # Check if all critical services are up
-    $apiHealth = docker-compose exec -T api wget -q --spider http://localhost:8080/health 2>&1
+    $apiHealth = docker compose --env-file ../.env exec -T api wget -q --spider http://localhost:8080/health 2>&1
     if ($LASTEXITCODE -eq 0) {
         break
     }
@@ -69,11 +80,11 @@ Write-Host ""
 Write-Host "Access the app:" -ForegroundColor Cyan
 Write-Host "  Frontend:    http://localhost:3000" -ForegroundColor White
 Write-Host "  API Health:  http://localhost:8080/health" -ForegroundColor White
-Write-Host "  MinIO:       http://localhost:9001 (minioadmin/minioadmin)" -ForegroundColor White
+Write-Host "  MinIO:       http://localhost:9001 (credentials in .env)" -ForegroundColor White
 Write-Host ""
 Write-Host "Useful commands:" -ForegroundColor Cyan
-Write-Host "  View logs:     cd docker; docker-compose logs -f" -ForegroundColor White
-Write-Host "  View API logs: cd docker; docker-compose logs -f api" -ForegroundColor White
+Write-Host "  View logs:     cd docker; docker compose --env-file ../.env logs -f" -ForegroundColor White
+Write-Host "  View API logs: cd docker; docker compose --env-file ../.env logs -f api" -ForegroundColor White
 Write-Host "  Stop all:      .\run-docker-full.ps1 -Down" -ForegroundColor White
 Write-Host "  Rebuild:       .\run-docker-full.ps1 -Build" -ForegroundColor White
 Write-Host ""

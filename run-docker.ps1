@@ -12,13 +12,23 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# Check if .env file exists
+$envFile = Join-Path $PSScriptRoot ".env"
+if (-not (Test-Path $envFile)) {
+    Write-Host "ERROR: .env file not found!" -ForegroundColor Red
+    Write-Host "Please create a .env file from the example:" -ForegroundColor Yellow
+    Write-Host "  Copy-Item .env.example .env" -ForegroundColor White
+    Write-Host "Then edit .env with your configuration values." -ForegroundColor Yellow
+    exit 1
+}
+
 Write-Host "[1/3] Building Docker images..." -ForegroundColor Yellow
 Set-Location -Path $PSScriptRoot\docker
 
 # Build and start all services
 Write-Host ""
 Write-Host "[2/3] Starting all services with Docker Compose..." -ForegroundColor Yellow
-docker-compose up --build -d
+docker compose --env-file ../.env up --build -d
 
 Write-Host ""
 Write-Host "[3/3] Waiting for services to be healthy..." -ForegroundColor Yellow
@@ -51,10 +61,10 @@ Write-Host ""
 Write-Host "Access the app:" -ForegroundColor Cyan
 Write-Host "  Frontend:  http://localhost:3000" -ForegroundColor White
 Write-Host "  API:       http://localhost:8080/health" -ForegroundColor White
-Write-Host "  MinIO:     http://localhost:9001 (minioadmin/minioadmin)" -ForegroundColor White
+Write-Host "  MinIO:     http://localhost:9001 (credentials in .env)" -ForegroundColor White
 Write-Host ""
 Write-Host "Commands:" -ForegroundColor Yellow
-Write-Host "  View logs:  cd docker && docker-compose logs -f" -ForegroundColor White
-Write-Host "  Stop:       cd docker && docker-compose down" -ForegroundColor White
-Write-Host "  Rebuild:    cd docker && docker-compose up --build -d" -ForegroundColor White
+Write-Host "  View logs:  cd docker && docker compose --env-file ../.env logs -f" -ForegroundColor White
+Write-Host "  Stop:       cd docker && docker compose --env-file ../.env down" -ForegroundColor White
+Write-Host "  Rebuild:    cd docker && docker compose --env-file ../.env up --build -d" -ForegroundColor White
 Write-Host ""

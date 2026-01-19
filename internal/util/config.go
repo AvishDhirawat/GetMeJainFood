@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"os"
 )
 
@@ -21,10 +22,10 @@ type Config struct {
 func Load() *Config {
 	cfg := &Config{
 		Port:        getEnv("PORT", "8080"),
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/jain_food?sslmode=disable"),
+		DatabaseURL: getEnvRequired("DATABASE_URL"),
 		RedisAddr:   getEnv("REDIS_ADDR", "localhost:6379"),
-		JwtSecret:   getEnv("JWT_SECRET", "replace_me"),
-		OtpSecret:   getEnv("OTP_SECRET", "replace_me_otp"),
+		JwtSecret:   getEnvRequired("JWT_SECRET"),
+		OtpSecret:   getEnvRequired("OTP_SECRET"),
 		// S3/MinIO configuration
 		S3Endpoint:  getEnv("S3_ENDPOINT", ""),
 		S3Region:    getEnv("S3_REGION", "us-east-1"),
@@ -41,3 +42,12 @@ func getEnv(k, d string) string {
 	}
 	return d
 }
+
+func getEnvRequired(k string) string {
+	v := os.Getenv(k)
+	if v == "" {
+		panic(fmt.Sprintf("Required environment variable %s is not set. Please check your .env file.", k))
+	}
+	return v
+}
+
