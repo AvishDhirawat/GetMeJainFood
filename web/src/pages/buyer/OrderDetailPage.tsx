@@ -1,4 +1,4 @@
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
@@ -16,7 +16,6 @@ import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from '../../types'
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [otpInput, setOtpInput] = useState('')
   const [isConfirming, setIsConfirming] = useState(false)
