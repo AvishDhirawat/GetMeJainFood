@@ -1,2 +1,8 @@
 # Coverage output
 coverage.out
+
+# Build artifacts
+bin/
+
+# Environment variables
+.env
