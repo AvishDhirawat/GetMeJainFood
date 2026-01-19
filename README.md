@@ -197,11 +197,9 @@ Decision: Go chosen for performance, concurrency, and team preference; admin UI 
 | Frontend | http://localhost:3000 (docker) / http://localhost:5173 (local) | React app |
 | API | http://localhost:8080 | Go backend |
 | API Health | http://localhost:8080/health | Health check endpoint |
-| MinIO Console | http://localhost:9001 | Object storage admin (minioadmin/minioadmin) |
 | MinIO Console | http://localhost:9001 | Object storage admin (credentials in .env) |
 ### Configuration
 
-Environment files are in `configs/`:
 First, create your environment file:
 ```bash
 cp .env.example .env

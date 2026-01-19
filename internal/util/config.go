@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"os"
 )
 
@@ -45,7 +46,7 @@ func getEnv(k, d string) string {
 func getEnvRequired(k string) string {
 	v := os.Getenv(k)
 	if v == "" {
-		panic("Required environment variable " + k + " is not set. Please check your .env file.")
+		panic(fmt.Sprintf("Required environment variable %s is not set. Please check your .env file.", k))
 	}
 	return v
 }
