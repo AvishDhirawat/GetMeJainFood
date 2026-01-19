@@ -147,11 +147,114 @@ Decision: Go chosen for performance, concurrency, and team preference; admin UI 
 6. Hardening: rate limits, verification workflow, image variants.
 7. Service extraction (as needed).
 
-## 11. Running Locally (to be expanded)
+## 11. Running the Application
+
+### Quick Start (One Command!)
+
 ```powershell
-# Example (after env configuration)
-go build ./...
-go run ./cmd/api
+# Start everything in Docker (recommended for first-time setup)
+.\run.ps1
+
+# Or for local development with hot-reload
+.\run.ps1 -Mode local
+```
+
+### Prerequisites
+
+- **Docker Desktop** - Required for all modes
+- **Go 1.23+** - Required for local mode
+- **Node.js 20+** - Required for local mode
+
+### Available Commands
+
+```powershell
+# Development (default)
+.\run.ps1                              # Start dev in Docker
+.\run.ps1 -Mode local                  # Start dev with hot-reload
+.\run.ps1 -Action down                 # Stop all services
+.\run.ps1 -Action logs                 # View logs
+.\run.ps1 -Action status               # Check service status
+.\run.ps1 -Action restart              # Restart all services
+
+# QA Environment
+.\run.ps1 -Environment qa              # Start QA environment
+.\run.ps1 -Environment qa -Action down # Stop QA
+
+# Production Environment
+.\run.ps1 -Environment prod            # Start production
+```
+
+### Environment Modes
+
+| Mode | Description | Best For |
+|------|-------------|----------|
+| `docker` (default) | All services run in containers | Testing, CI/CD, production-like testing |
+| `local` | Only infra in Docker, Go/React run natively | Development with hot-reload |
+
+### Access Points
+
+| Service | URL | Notes |
+|---------|-----|-------|
+| Frontend | http://localhost:3000 (docker) / http://localhost:5173 (local) | React app |
+| API | http://localhost:8080 | Go backend |
+| API Health | http://localhost:8080/health | Health check endpoint |
+| MinIO Console | http://localhost:9001 | Object storage admin (minioadmin/minioadmin) |
+
+### Configuration
+
+Environment files are in `configs/`:
+- `.env.dev` - Development settings (pre-configured)
+- `.env.qa` - QA settings (configure before use)
+- `.env.prod.example` - Production template (copy and configure)
+
+### Architecture (Services)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Docker Compose Stack                      │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────────────┐ │
+│  │   Web   │  │   API   │  │  Redis  │  │    PostgreSQL   │ │
+│  │ (React) │──│  (Go)   │──│ (Cache) │  │   (PostGIS)     │ │
+│  │  :3000  │  │  :8080  │  │  :6379  │  │     :5432       │ │
+│  └─────────┘  └────┬────┘  └─────────┘  └─────────────────┘ │
+│                    │                                         │
+│               ┌────┴────┐                                    │
+│               │  MinIO  │                                    │
+│               │ (S3/Obj)│                                    │
+│               │  :9000  │                                    │
+│               └─────────┘                                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Troubleshooting
+
+**Docker not running:**
+```
+ERROR: Docker is not running. Please start Docker Desktop first.
+```
+→ Start Docker Desktop and wait for it to be ready.
+
+**Port already in use:**
+```powershell
+# Check what's using the port
+netstat -ano | findstr :8080
+# Kill the process or change PORT in .env file
+```
+
+**Database connection failed:**
+```powershell
+# Check if postgres is healthy
+docker compose -f docker/docker-compose.yml ps
+# View postgres logs
+docker compose -f docker/docker-compose.yml logs postgres
+```
+
+**Clean restart:**
+```powershell
+.\run.ps1 -Action down
+docker volume prune -f  # Warning: removes all unused volumes
+.\run.ps1
 ```
 
 ## 12. Next Steps
