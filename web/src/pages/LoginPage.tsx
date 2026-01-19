@@ -50,7 +50,7 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [phone])
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -90,9 +90,11 @@ export default function LoginPage() {
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <span className="text-4xl">🌿</span>
-          </div>
+          <img
+            src="/logo.svg"
+            alt="JainFood Logo"
+            className="w-20 h-20 mx-auto mb-4 drop-shadow-lg"
+          />
           <h1 className="text-3xl font-bold text-gray-900">JainFood</h1>
           <p className="text-gray-600 mt-2">Pure Jain Food Delivery</p>
         </div>
