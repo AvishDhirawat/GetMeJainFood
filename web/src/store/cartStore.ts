@@ -56,7 +56,7 @@ export const useCartStore = create<CartState>()(
           })
         } else {
           set({
-            items: [...state.items, { item, quantity: 1, provider_id: providerId, provider_name: providerName }],
+            items: [...state.items, { item, quantity: 1, providerId, providerName }],
             providerId,
             providerName,
           })

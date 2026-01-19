@@ -95,8 +95,8 @@ export type OrderStatus =
 export interface CartItem {
   item: MenuItem
   quantity: number
-  provider_id: string
-  provider_name: string
+  providerId: string
+  providerName: string
 }
 
 // Chat types
