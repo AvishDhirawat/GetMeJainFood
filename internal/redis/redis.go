@@ -1,15 +1,5 @@
-package redisclient
+// Deprecated: This package has been moved to internal/redisclient
+// Please use jainfood/internal/redisclient instead
+package redis
 
-import (
-    "context"
-    "github.com/redis/go-redis/v9"
-)
-
-var Ctx = context.Background()
-var Rdb *redis.Client
-
-func Connect(addr string) {
-    Rdb = redis.NewClient(&redis.Options{
-        Addr: addr,
-    })
-}
+// This file is deprecated. Use internal/redisclient/redisclient.go instead.
