@@ -127,3 +127,32 @@ func ListProviders(ctx context.Context, limit, offset int) ([]*models.Provider, 
 	}
 	return providers, nil
 }
+
+// BlockProvider blocks a provider (admin only)
+func BlockProvider(ctx context.Context, providerID, reason string) error {
+	ct, err := db.Pool.Exec(ctx, `
+		UPDATE providers SET blocked = true, blocked_reason = $2 WHERE id = $1
+	`, providerID, reason)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("provider not found")
+	}
+	return nil
+}
+
+// UnblockProvider unblocks a provider (admin only)
+func UnblockProvider(ctx context.Context, providerID string) error {
+	ct, err := db.Pool.Exec(ctx, `
+		UPDATE providers SET blocked = false, blocked_reason = NULL WHERE id = $1
+	`, providerID)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("provider not found")
+	}
+	return nil
+}
+

@@ -290,6 +290,10 @@ export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { lat, lng, address } = useLocationStore()
 
+  // Get category filters from URL
+  const providerCategory = searchParams.get('provider_category') || ''
+  const foodCategory = searchParams.get('food_category') || ''
+
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '')
   const [searchType, setSearchType] = useState<'providers' | 'items'>(
     (searchParams.get('type') as 'providers' | 'items') || 'providers'
@@ -313,12 +317,14 @@ export default function SearchPage() {
     if (filters.priceMax) params.set('price_max', filters.priceMax.toString())
     if (!filters.jainOnly) params.set('jain_only', 'false')
     if (!filters.availableOnly) params.set('available_only', 'false')
-    setSearchParams(params)
-  }, [searchQuery, searchType, filters, setSearchParams])
+    if (providerCategory) params.set('provider_category', providerCategory)
+    if (foodCategory) params.set('food_category', foodCategory)
+    setSearchParams(params, { replace: true })
+  }, [searchQuery, searchType, filters, providerCategory, foodCategory, setSearchParams])
 
   // Provider search query
   const { data: providers, isLoading: providersLoading } = useQuery({
-    queryKey: ['search-providers', lat, lng, filters],
+    queryKey: ['search-providers', lat, lng, filters, providerCategory],
     queryFn: () =>
       searchApi.providers({
         lat: lat || 19.076,
@@ -326,6 +332,7 @@ export default function SearchPage() {
         radius: 15000,
         tags: filters.tags.length ? filters.tags : undefined,
         min_rating: filters.minRating || undefined,
+        provider_category: providerCategory || undefined,
         limit: 50,
       }),
     enabled: searchType === 'providers',
@@ -333,7 +340,7 @@ export default function SearchPage() {
 
   // Item search query
   const { data: items, isLoading: itemsLoading } = useQuery({
-    queryKey: ['search-items', lat, lng, searchQuery, filters],
+    queryKey: ['search-items', lat, lng, searchQuery, filters, foodCategory],
     queryFn: () =>
       searchApi.items({
         lat: lat || 19.076,

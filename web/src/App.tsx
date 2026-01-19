@@ -13,12 +13,14 @@ import ProtectedRoute from './components/ProtectedRoute'
 // Layouts
 import MainLayout from './layouts/MainLayout'
 import ProviderLayout from './layouts/ProviderLayout'
+import AdminLayout from './layouts/AdminLayout'
 
 // Public Pages
 import HomePage from './pages/HomePage'
 import SearchPage from './pages/SearchPage'
 import ProviderDetailPage from './pages/ProviderDetailPage'
 import LoginPage from './pages/LoginPage'
+import FAQPage from './pages/FAQPage'
 
 // Buyer Pages
 import CartPage from './pages/buyer/CartPage'
@@ -32,6 +34,12 @@ import ProviderMenus from './pages/provider/Menus'
 import ProviderOrders from './pages/provider/Orders'
 import ProviderProfile from './pages/provider/Profile'
 import ProviderOnboarding from './pages/provider/Onboarding'
+
+// Admin Pages
+import AdminDashboard from './pages/admin/Dashboard'
+import AdminUsers from './pages/admin/Users'
+import AdminProviders from './pages/admin/Providers'
+import AdminReviews from './pages/admin/Reviews'
 
 // Page view tracking component
 function PageTracker() {
@@ -104,6 +112,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/provider/:id" element={<ProviderDetailPage />} />
+            <Route path="/faq" element={<FAQPage />} />
 
             {/* Protected Buyer Routes */}
             <Route element={<ProtectedRoute />}>
@@ -130,6 +139,18 @@ function App() {
             <Route path="menus" element={<ProviderMenus />} />
             <Route path="orders" element={<ProviderOrders />} />
             <Route path="profile" element={<ProviderProfile />} />
+          </Route>
+
+          {/* Admin Routes */}
+          <Route path="/admin" element={
+            <ProtectedRoute requiredRole="admin">
+              <AdminLayout />
+            </ProtectedRoute>
+          }>
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="providers" element={<AdminProviders />} />
+            <Route path="reviews" element={<AdminReviews />} />
           </Route>
         </Routes>
 

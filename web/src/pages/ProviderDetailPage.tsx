@@ -1,7 +1,8 @@
 import { useParams, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { useState } from 'react'
 import {
   MapPinIcon,
   ClockIcon,
@@ -11,12 +12,15 @@ import {
   PlusIcon,
   ShoppingCartIcon,
   CheckBadgeIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline'
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
-import { providerApi, menuApi, menuItemApi } from '../api/client'
+import { providerApi, menuApi, menuItemApi, reviewApi } from '../api/client'
 import { useCartStore } from '../store/cartStore'
+import { useAuthStore } from '../store/authStore'
+import { useLanguageStore } from '../store/languageStore'
 import { JAIN_TAGS } from '../types'
-import type { MenuItem } from '../types'
+import type { MenuItem, Review } from '../types'
 
 // Menu Item Component
 function MenuItemCard({
@@ -130,6 +134,296 @@ function MenuItemCard({
         </div>
       </div>
     </motion.div>
+  )
+}
+
+// Review Card Component
+function ReviewCard({ review }: { review: Review }) {
+  const { t } = useLanguageStore()
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white rounded-xl p-4 border"
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+            <span className="text-primary-600 font-semibold">
+              {(review.user_name || 'A').charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <div>
+            <p className="font-medium text-gray-900">{review.user_name || 'Anonymous'}</p>
+            <p className="text-sm text-gray-500">{formatDate(review.created_at)}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-lg">
+          <StarSolid className="w-4 h-4" />
+          <span className="font-semibold">{review.rating}</span>
+        </div>
+      </div>
+      {review.comment && (
+        <p className="text-gray-700">{review.comment}</p>
+      )}
+      {review.photo_urls && review.photo_urls.length > 0 && (
+        <div className="flex gap-2 mt-3 overflow-x-auto">
+          {review.photo_urls.map((url, idx) => (
+            <img
+              key={idx}
+              src={url}
+              alt={`Review photo ${idx + 1}`}
+              className="w-20 h-20 object-cover rounded-lg"
+            />
+          ))}
+        </div>
+      )}
+    </motion.div>
+  )
+}
+
+// Write Review Modal
+function WriteReviewModal({
+  isOpen,
+  onClose,
+  providerId,
+  providerName,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  providerId: string
+  providerName: string
+}) {
+  const { t } = useLanguageStore()
+  const queryClient = useQueryClient()
+  const [rating, setRating] = useState(5)
+  const [comment, setComment] = useState('')
+  const [hoveredRating, setHoveredRating] = useState(0)
+
+  const createReviewMutation = useMutation({
+    mutationFn: () =>
+      reviewApi.create({
+        provider_id: providerId,
+        rating,
+        comment,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reviews', providerId] })
+      queryClient.invalidateQueries({ queryKey: ['review-stats', providerId] })
+      toast.success(t('reviewSubmitted'))
+      setRating(5)
+      setComment('')
+      onClose()
+    },
+    onError: () => {
+      toast.error(t('reviewFailed'))
+    },
+  })
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-2xl max-w-md w-full p-6"
+      >
+        <h3 className="text-xl font-bold text-gray-900 mb-2">{t('writeReview')}</h3>
+        <p className="text-gray-600 mb-4">{providerName}</p>
+
+        {/* Rating Stars */}
+        <div className="flex items-center justify-center gap-2 mb-6">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              type="button"
+              onClick={() => setRating(star)}
+              onMouseEnter={() => setHoveredRating(star)}
+              onMouseLeave={() => setHoveredRating(0)}
+              className="p-1 transition-transform hover:scale-110"
+            >
+              {(hoveredRating || rating) >= star ? (
+                <StarSolid className="w-10 h-10 text-yellow-400" />
+              ) : (
+                <StarIcon className="w-10 h-10 text-gray-300" />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* Comment */}
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder={t('reviewPlaceholder')}
+          className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+          rows={4}
+        />
+
+        {/* Actions */}
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50"
+          >
+            {t('cancel')}
+          </button>
+          <button
+            onClick={() => createReviewMutation.mutate()}
+            disabled={createReviewMutation.isPending}
+            className="flex-1 px-4 py-3 bg-primary-500 text-white rounded-xl font-medium hover:bg-primary-600 disabled:opacity-50"
+          >
+            {createReviewMutation.isPending ? t('submitting') : t('submitReview')}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+// Reviews Section Component
+function ReviewsSection({ providerId, providerName }: { providerId: string; providerName: string }) {
+  const { t } = useLanguageStore()
+  const { isAuthenticated } = useAuthStore()
+  const [showWriteReview, setShowWriteReview] = useState(false)
+
+  // Fetch reviews
+  const { data: reviews, isLoading: reviewsLoading } = useQuery({
+    queryKey: ['reviews', providerId],
+    queryFn: () => reviewApi.getByProvider(providerId),
+    enabled: !!providerId,
+  })
+
+  // Fetch review stats
+  const { data: stats } = useQuery({
+    queryKey: ['review-stats', providerId],
+    queryFn: () => reviewApi.getStats(providerId),
+    enabled: !!providerId,
+  })
+
+  return (
+    <div className="mt-8">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <ChatBubbleLeftRightIcon className="w-6 h-6" />
+          {t('reviews')}
+          {stats && (
+            <span className="text-sm font-normal text-gray-500">
+              ({stats.total_reviews})
+            </span>
+          )}
+        </h2>
+        {isAuthenticated && (
+          <button
+            onClick={() => setShowWriteReview(true)}
+            className="px-4 py-2 bg-primary-500 text-white text-sm font-medium rounded-lg hover:bg-primary-600 transition-colors"
+          >
+            {t('writeReview')}
+          </button>
+        )}
+      </div>
+
+      {/* Rating Summary */}
+      {stats && stats.total_reviews > 0 && (
+        <div className="bg-white rounded-xl p-4 border mb-4">
+          <div className="flex items-center gap-6">
+            <div className="text-center">
+              <div className="text-4xl font-bold text-gray-900">
+                {stats.average_rating.toFixed(1)}
+              </div>
+              <div className="flex items-center justify-center gap-1 mt-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <StarSolid
+                    key={star}
+                    className={`w-4 h-4 ${
+                      star <= Math.round(stats.average_rating)
+                        ? 'text-yellow-400'
+                        : 'text-gray-200'
+                    }`}
+                  />
+                ))}
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                {stats.total_reviews} {t('reviewsCount')}
+              </p>
+            </div>
+            <div className="flex-1 space-y-1">
+              {[5, 4, 3, 2, 1].map((rating) => {
+                const count = stats.rating_counts[rating.toString()] || 0
+                const percentage = stats.total_reviews > 0
+                  ? (count / stats.total_reviews) * 100
+                  : 0
+                return (
+                  <div key={rating} className="flex items-center gap-2 text-sm">
+                    <span className="w-3 text-gray-600">{rating}</span>
+                    <StarSolid className="w-3 h-3 text-yellow-400" />
+                    <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-yellow-400 rounded-full"
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                    <span className="w-8 text-gray-500 text-right">{count}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reviews List */}
+      {reviewsLoading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-xl p-4 border animate-pulse">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-gray-200" />
+                <div className="flex-1">
+                  <div className="h-4 bg-gray-200 rounded w-24" />
+                  <div className="h-3 bg-gray-200 rounded w-16 mt-1" />
+                </div>
+              </div>
+              <div className="h-4 bg-gray-200 rounded w-full" />
+              <div className="h-4 bg-gray-200 rounded w-3/4 mt-2" />
+            </div>
+          ))}
+        </div>
+      ) : reviews && reviews.length > 0 ? (
+        <div className="space-y-3">
+          {reviews.map((review) => (
+            <ReviewCard key={review.id} review={review} />
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl p-8 text-center border">
+          <span className="text-4xl block mb-4">💬</span>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('noReviews')}</h3>
+          <p className="text-gray-600">
+            {isAuthenticated ? t('beFirstToReview') : t('loginToReview')}
+          </p>
+        </div>
+      )}
+
+      {/* Write Review Modal */}
+      <WriteReviewModal
+        isOpen={showWriteReview}
+        onClose={() => setShowWriteReview(false)}
+        providerId={providerId}
+        providerName={providerName}
+      />
+    </div>
   )
 }
 
@@ -311,6 +605,9 @@ export default function ProviderDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Reviews Section */}
+        <ReviewsSection providerId={provider.id} providerName={provider.business_name} />
       </div>
 
       {/* Cart Footer */}

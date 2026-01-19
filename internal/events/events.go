@@ -21,6 +21,7 @@ const (
 	EventOrderCompleted   = "ORDER_COMPLETED"
 	EventChatCreated      = "CHAT_CREATED"
 	EventMessageSent      = "MESSAGE_SENT"
+	EventReviewCreated    = "REVIEW_CREATED"
 )
 
 // Event represents an audit/domain event.

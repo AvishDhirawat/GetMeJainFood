@@ -13,6 +13,7 @@ import type {
   ItemSearchResult,
   Chat,
   ChatMessage,
+  Review,
 } from '../types'
 
 import {
@@ -135,9 +136,27 @@ export const mockProviderApi = {
   create: async (provider: { business_name: string; address: string; lat: number; lng: number; tags?: string[] }): Promise<Provider> => {
     await delay(500)
     const newP: ProviderSearchResult = {
-      id: 'prov-' + Date.now(), user_id: currentUser?.id || 'unknown', business_name: provider.business_name,
-      address: provider.address, lat: provider.lat, lng: provider.lng, verified: false, tags: provider.tags || [],
-      rating: 0, created_at: new Date().toISOString(), distance_meters: 0,
+      id: 'prov-' + Date.now(),
+      user_id: currentUser?.id || 'unknown',
+      business_name: provider.business_name,
+      address: provider.address,
+      lat: provider.lat,
+      lng: provider.lng,
+      verified: false,
+      aadhar_verified: false,
+      tags: provider.tags || [],
+      rating: 0,
+      total_ratings: 0,
+      total_orders: 0,
+      available_today: true,
+      min_order_quantity: 1,
+      bulk_order_enabled: false,
+      free_delivery_min_price: 0,
+      free_delivery_max_km: 0,
+      is_promoted: false,
+      blocked: false,
+      created_at: new Date().toISOString(),
+      distance_meters: 0,
     }
     providers.push(newP)
     if (currentUser) currentUser = { ...currentUser, role: 'provider' }
@@ -214,16 +233,17 @@ export const mockMenuItemApi = {
 }
 
 export const mockSearchApi = {
-  providers: async (params: { lat: number; lng: number; radius?: number; tags?: string[]; min_rating?: number; limit?: number; offset?: number }): Promise<ProviderSearchResult[]> => {
+  providers: async (params: { lat: number; lng: number; radius?: number; tags?: string[]; min_rating?: number; provider_category?: string; limit?: number; offset?: number }): Promise<ProviderSearchResult[]> => {
     await delay(400)
     let results = [...providers]
     if (params.tags?.length) results = results.filter(p => params.tags!.some(t => p.tags.includes(t)))
     if (params.min_rating && params.min_rating > 0) results = results.filter(p => p.rating >= params.min_rating!)
+    if (params.provider_category) results = results.filter(p => p.provider_category === params.provider_category)
     results = results.map(p => ({ ...p, distance_meters: Math.floor(Math.random() * (params.radius || 10000)) + 200 }))
     results.sort((a, b) => (a.distance_meters || 0) - (b.distance_meters || 0))
     return results.slice(params.offset || 0, (params.offset || 0) + (params.limit || 20))
   },
-  items: async (params: { lat: number; lng: number; radius?: number; q?: string; jain_only?: boolean; available_only?: boolean; tags?: string[]; price_max?: number; limit?: number; offset?: number }): Promise<ItemSearchResult[]> => {
+  items: async (params: { lat: number; lng: number; radius?: number; q?: string; jain_only?: boolean; available_only?: boolean; tags?: string[]; price_max?: number; food_category?: string; limit?: number; offset?: number }): Promise<ItemSearchResult[]> => {
     await delay(400)
     let allItems: ItemSearchResult[] = []
     for (const p of providers) {
@@ -237,6 +257,7 @@ export const mockSearchApi = {
     if (params.jain_only) allItems = allItems.filter(i => i.is_jain)
     if (params.available_only) allItems = allItems.filter(i => i.availability)
     if (params.price_max && params.price_max > 0) allItems = allItems.filter(i => i.price <= params.price_max!)
+    if (params.food_category) allItems = allItems.filter(i => i.food_category === params.food_category)
     return allItems.slice(params.offset || 0, (params.offset || 0) + (params.limit || 20))
   },
 }
@@ -247,7 +268,18 @@ export const mockOrderApi = {
     const p = providers.find(x => x.id === order.provider_id)
     const otp = generateOTP()
     const code = generateOrderCode()
-    const newO: Order = { id: 'order-' + Date.now(), order_code: code, buyer_id: currentUser?.id || 'guest', provider_id: order.provider_id, items: order.items, total_estimate: order.total, status: 'CREATED', created_at: new Date().toISOString(), provider: p }
+    const newO: Order = {
+      id: 'order-' + Date.now(),
+      order_code: code,
+      buyer_id: currentUser?.id || 'guest',
+      provider_id: order.provider_id,
+      items: order.items,
+      total_estimate: order.total,
+      status: 'CREATED',
+      order_type: 'individual',
+      created_at: new Date().toISOString(),
+      provider: p,
+    }
     orders.push(newO)
     otpStore[newO.id] = otp
     return { order_id: newO.id, order_code: code, otp }
@@ -330,6 +362,102 @@ export const mockMediaApi = {
   getDownloadUrl: async (objectKey: string) => {
     await delay(200)
     return { url: `https://mock-storage.example.com/${objectKey}`, expires_in_seconds: 3600 }
+  },
+}
+
+// Mock reviews storage
+let reviews: Review[] = loadFromStorage<Review[]>('jain-food-mock-reviews', [
+  {
+    id: 'rev-1',
+    provider_id: 'prov-1',
+    user_id: 'user-1',
+    rating: 5,
+    comment: 'Amazing authentic Jain food! The thali was delicious and perfectly sattvic.',
+    photo_urls: [],
+    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    user_name: 'Rahul S.',
+  },
+  {
+    id: 'rev-2',
+    provider_id: 'prov-1',
+    user_id: 'user-2',
+    rating: 4,
+    comment: 'Good quality food. Delivery was on time. Will order again!',
+    photo_urls: [],
+    created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    user_name: 'Priya M.',
+  },
+  {
+    id: 'rev-3',
+    provider_id: 'prov-2',
+    user_id: 'user-1',
+    rating: 5,
+    comment: 'Best Jain restaurant in town! Highly recommend the paneer dishes.',
+    photo_urls: [],
+    created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    user_name: 'Rahul S.',
+  },
+])
+
+export const mockReviewApi = {
+  getByProvider: async (providerId: string, limit = 20, offset = 0): Promise<Review[]> => {
+    await delay(300)
+    const providerReviews = reviews.filter(r => r.provider_id === providerId)
+    return providerReviews.slice(offset, offset + limit)
+  },
+
+  getStats: async (providerId: string): Promise<{
+    average_rating: number
+    total_reviews: number
+    rating_counts: { [key: string]: number }
+  }> => {
+    await delay(200)
+    const providerReviews = reviews.filter(r => r.provider_id === providerId)
+    const total = providerReviews.length
+    const avgRating = total > 0 ? providerReviews.reduce((sum, r) => sum + r.rating, 0) / total : 0
+    const ratingCounts: { [key: string]: number } = { '1': 0, '2': 0, '3': 0, '4': 0, '5': 0 }
+    providerReviews.forEach(r => {
+      ratingCounts[r.rating.toString()] = (ratingCounts[r.rating.toString()] || 0) + 1
+    })
+    return { average_rating: avgRating, total_reviews: total, rating_counts: ratingCounts }
+  },
+
+  create: async (review: {
+    provider_id: string
+    order_id?: string
+    rating: number
+    comment: string
+    photo_urls?: string[]
+  }): Promise<Review> => {
+    await delay(400)
+    if (!currentUser) throw new Error('Not authenticated')
+    const newReview: Review = {
+      id: `rev-${Date.now()}`,
+      provider_id: review.provider_id,
+      user_id: currentUser.id,
+      order_id: review.order_id,
+      rating: review.rating,
+      comment: review.comment,
+      photo_urls: review.photo_urls || [],
+      created_at: new Date().toISOString(),
+      user_name: currentUser.name || 'Anonymous',
+    }
+    reviews.unshift(newReview)
+    saveToStorage('jain-food-mock-reviews', reviews)
+    return newReview
+  },
+
+  getMyReviews: async (limit = 20, offset = 0): Promise<Review[]> => {
+    await delay(300)
+    if (!currentUser) return []
+    const myReviews = reviews.filter(r => r.user_id === currentUser?.id)
+    return myReviews.slice(offset, offset + limit)
+  },
+
+  delete: async (reviewId: string): Promise<void> => {
+    await delay(300)
+    reviews = reviews.filter(r => r.id !== reviewId)
+    saveToStorage('jain-food-mock-reviews', reviews)
   },
 }
 

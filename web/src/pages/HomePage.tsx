@@ -9,11 +9,14 @@ import {
 } from '@heroicons/react/24/solid'
 import { searchApi } from '../api/client'
 import { useLocationStore } from '../store/locationStore'
+import { useLanguageStore } from '../store/languageStore'
 import type { ProviderSearchResult } from '../types'
 import { JAIN_TAGS } from '../types'
 
 // Hero Section Component
 function HeroSection() {
+  const { t } = useLanguageStore()
+
   return (
     <section className="relative bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 text-white overflow-hidden">
       <div className="absolute inset-0 bg-black/10" />
@@ -28,12 +31,11 @@ function HeroSection() {
           className="max-w-2xl"
         >
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
-            Pure Jain Food,<br />
-            <span className="text-emerald-200">Delivered Fresh</span>
+            {t('home.hero.title')}<br />
+            <span className="text-emerald-200">{t('home.hero.subtitle')}</span>
           </h1>
           <p className="text-lg md:text-xl text-white/90 mb-8">
-            Discover authentic Jain-compliant restaurants, cloud kitchens, and home cooks near you.
-            100% vegetarian, no root vegetables, no onion, no garlic.
+            {t('home.hero.description')}
           </p>
 
           {/* Search Bar */}
@@ -43,13 +45,13 @@ function HeroSection() {
               className="flex-1 flex items-center gap-3 px-5 py-4 bg-white rounded-xl text-gray-600 hover:shadow-lg transition-shadow"
             >
               <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />
-              <span>Search for restaurants or dishes...</span>
+              <span>{t('home.search.placeholder')}</span>
             </Link>
             <Link
               to="/search"
               className="px-6 py-4 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-colors text-center"
             >
-              Find Food
+              {t('home.findFood')}
             </Link>
           </div>
         </motion.div>
@@ -58,37 +60,135 @@ function HeroSection() {
   )
 }
 
-// Categories Section
-function CategoriesSection() {
-  const categories = [
-    { name: 'Pure Jain', icon: '🌿', tag: 'pure-jain', color: 'bg-green-100' },
-    { name: 'Sattvic', icon: '🧘', tag: 'sattvic', color: 'bg-purple-100' },
-    { name: 'No Root Veggies', icon: '🥗', tag: 'no-root-veggies', color: 'bg-blue-100' },
-    { name: 'Home Cooks', icon: '👩‍🍳', tag: 'home-cook', color: 'bg-orange-100' },
-    { name: 'Cloud Kitchen', icon: '☁️', tag: 'cloud-kitchen', color: 'bg-cyan-100' },
-    { name: 'Hotels', icon: '🏨', tag: 'hotel', color: 'bg-pink-100' },
+// Provider Categories Section (Jain-specific)
+function ProviderCategoriesSection() {
+  const { t, language } = useLanguageStore()
+
+  const providerCategories = [
+    { key: 'tiffin-center', icon: '🍱', color: 'bg-orange-100' },
+    { key: 'caterer', icon: '🍽️', color: 'bg-blue-100' },
+    { key: 'bhojnalaya', icon: '🏠', color: 'bg-green-100' },
+    { key: 'restaurant', icon: '🍛', color: 'bg-red-100' },
+    { key: 'baker', icon: '🧁', color: 'bg-pink-100' },
+    { key: 'raw-material', icon: '🌾', color: 'bg-yellow-100' },
+    { key: 'sodh-khana', icon: '🙏', color: 'bg-purple-100' },
+    { key: 'home-chef', icon: '👩‍🍳', color: 'bg-cyan-100' },
+    { key: 'chauka-bai', icon: '👵', color: 'bg-amber-100' },
   ]
 
   return (
     <section className="py-12 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">What are you looking for?</h2>
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
-          {categories.map((cat, index) => (
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          {language === 'hi' ? 'जैन भोजन प्रदाता' : 'Jain Food Providers'}
+        </h2>
+        <p className="text-gray-600 mb-6">
+          {language === 'hi' ? 'अपने पसंदीदा प्रदाता चुनें' : 'Choose your preferred provider type'}
+        </p>
+        <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3">
+          {providerCategories.map((cat, index) => (
             <motion.div
-              key={cat.tag}
+              key={cat.key}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
             >
               <Link
-                to={`/search?tags=${cat.tag}`}
-                className={`${cat.color} flex flex-col items-center justify-center p-4 rounded-2xl hover:shadow-md transition-all card-hover`}
+                to={`/search?provider_category=${cat.key}`}
+                className={`${cat.color} flex flex-col items-center justify-center p-3 rounded-2xl hover:shadow-md transition-all card-hover`}
               >
-                <span className="text-3xl mb-2">{cat.icon}</span>
-                <span className="text-sm font-medium text-gray-700 text-center">{cat.name}</span>
+                <span className="text-2xl mb-1">{cat.icon}</span>
+                <span className="text-xs font-medium text-gray-700 text-center leading-tight">
+                  {t(`category.${cat.key}`)}
+                </span>
               </Link>
             </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// Food Categories Section
+function FoodCategoriesSection() {
+  const { t, language } = useLanguageStore()
+
+  const foodCategories = [
+    { key: 'tiffin-thali', icon: '🍛', color: 'bg-orange-100' },
+    { key: 'sweets', icon: '🍬', color: 'bg-pink-100' },
+    { key: 'bakery', icon: '🍰', color: 'bg-amber-100' },
+    { key: 'namkeen', icon: '🥨', color: 'bg-yellow-100' },
+    { key: 'dry-fruits', icon: '🥜', color: 'bg-amber-100' },
+    { key: 'icecream', icon: '🍨', color: 'bg-cyan-100' },
+    { key: 'raw-materials', icon: '🌾', color: 'bg-green-100' },
+    { key: 'sodh-ka-khana', icon: '🙏', color: 'bg-purple-100' },
+    { key: 'nirvaan-laddu', icon: '🟡', color: 'bg-yellow-100' },
+  ]
+
+  return (
+    <section className="py-12 bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          {language === 'hi' ? 'भोजन श्रेणियां' : 'Food Categories'}
+        </h2>
+        <p className="text-gray-600 mb-6">
+          {language === 'hi' ? 'अपनी पसंद का भोजन चुनें' : 'Choose your preferred food type'}
+        </p>
+        <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3">
+          {foodCategories.map((cat, index) => (
+            <motion.div
+              key={cat.key}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <Link
+                to={`/search?food_category=${cat.key}`}
+                className={`${cat.color} flex flex-col items-center justify-center p-3 rounded-2xl hover:shadow-md transition-all card-hover`}
+              >
+                <span className="text-2xl mb-1">{cat.icon}</span>
+                <span className="text-xs font-medium text-gray-700 text-center leading-tight">
+                  {t(`food.${cat.key}`)}
+                </span>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// Diet Tags Section
+function DietTagsSection() {
+  const { t, language } = useLanguageStore()
+
+  const dietTags = [
+    { key: 'pure-jain', icon: '🌿', color: 'bg-green-100' },
+    { key: 'sattvic', icon: '🧘', color: 'bg-purple-100' },
+    { key: 'no-root-veggies', icon: '🥗', color: 'bg-blue-100' },
+    { key: 'home-cook', icon: '👩‍🍳', color: 'bg-orange-100' },
+    { key: 'cloud-kitchen', icon: '☁️', color: 'bg-cyan-100' },
+    { key: 'hotel', icon: '🏨', color: 'bg-pink-100' },
+  ]
+
+  return (
+    <section className="py-8 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">
+          {language === 'hi' ? 'आहार के अनुसार छाँटें' : 'Filter by Diet'}
+        </h2>
+        <div className="flex flex-wrap gap-3">
+          {dietTags.map((tag) => (
+            <Link
+              key={tag.key}
+              to={`/search?tags=${tag.key}`}
+              className={`${tag.color} flex items-center gap-2 px-4 py-2 rounded-full hover:shadow-md transition-all`}
+            >
+              <span className="text-xl">{tag.icon}</span>
+              <span className="text-sm font-medium text-gray-700">{t(`tag.${tag.key}`)}</span>
+            </Link>
           ))}
         </div>
       </div>
@@ -177,6 +277,7 @@ function ProviderCard({ provider, index }: { provider: ProviderSearchResult; ind
 // Nearby Providers Section
 function NearbyProvidersSection() {
   const { lat, lng } = useLocationStore()
+  const { t, language } = useLanguageStore()
 
   const { data: providers, isLoading, error } = useQuery({
     queryKey: ['nearby-providers', lat, lng],
@@ -196,11 +297,15 @@ function NearbyProvidersSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Restaurants Near You</h2>
-            <p className="text-gray-600 mt-1">Discover Jain-friendly places around you</p>
+            <h2 className="text-2xl font-bold text-gray-900">
+              {language === 'hi' ? 'आपके आस-पास के रेस्तरां' : 'Restaurants Near You'}
+            </h2>
+            <p className="text-gray-600 mt-1">
+              {language === 'hi' ? 'अपने आस-पास जैन-अनुकूल स्थान खोजें' : 'Discover Jain-friendly places around you'}
+            </p>
           </div>
           <Link to="/search" className="text-primary-600 font-medium hover:text-primary-700">
-            View all →
+            {language === 'hi' ? 'सभी देखें →' : 'View all →'}
           </Link>
         </div>
 
@@ -322,7 +427,9 @@ export default function HomePage() {
   return (
     <div>
       <HeroSection />
-      <CategoriesSection />
+      <ProviderCategoriesSection />
+      <FoodCategoriesSection />
+      <DietTagsSection />
       <NearbyProvidersSection />
       <HowItWorksSection />
       <BecomeProviderCTA />

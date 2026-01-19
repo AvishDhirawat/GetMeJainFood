@@ -2,12 +2,16 @@ package db
 
 import (
     "context"
+    "errors"
     "time"
 
     "github.com/jackc/pgx/v5/pgxpool"
 )
 
 var Pool *pgxpool.Pool
+
+// ErrNotFound is returned when a requested record is not found
+var ErrNotFound = errors.New("record not found")
 
 func Connect(ctx context.Context, databaseURL string) error {
     cfg, err := pgxpool.ParseConfig(databaseURL)
