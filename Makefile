@@ -3,7 +3,7 @@
 .PHONY: help build run test lint clean docker-build docker-run dev
 
 # Default Go version
-GO_VERSION ?= 1.21
+GO_VERSION ?= 1.25
 
 # Binary name
 BINARY_NAME=jain-api
