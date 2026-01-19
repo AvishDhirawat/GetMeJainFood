@@ -35,37 +35,42 @@ export default function Logo({
       className="flex-shrink-0"
     >
       <defs>
-        {/* Clean gradient - deep emerald to vibrant green */}
+        {/* Premium gradient - emerald to mint */}
         <linearGradient id={`jf-grad-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#047857" />
+          <stop offset="0%" stopColor="#059669" />
           <stop offset="100%" stopColor="#10B981" />
         </linearGradient>
+        <filter id={`jf-shadow-${size}`} x="-10%" y="-10%" width="120%" height="120%">
+          <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#059669" floodOpacity="0.2"/>
+        </filter>
       </defs>
 
-      {/* Simple rounded square background - modern & clean */}
+      {/* Premium rounded square with subtle shadow */}
       <rect
-        x="10"
-        y="10"
-        width="80"
-        height="80"
+        x="8"
+        y="8"
+        width="84"
+        height="84"
         rx="18"
         fill={`url(#jf-grad-${size})`}
+        filter={`url(#jf-shadow-${size})`}
       />
 
-      {/* Minimalist "J" - bold and modern */}
+      {/* Elegant "J" letterform */}
       <path
-        d="M35 30 L35 55 C35 65 42 70 50 70 C55 70 58 68 60 65"
+        d="M36 26 L36 58 C36 70 44 78 56 78 C64 78 70 74 74 66"
         stroke="white"
-        strokeWidth="7"
+        strokeWidth="9"
         strokeLinecap="round"
+        strokeLinejoin="round"
         fill="none"
       />
 
-      {/* Simple leaf accent - minimal and elegant */}
+      {/* Premium leaf design */}
       <path
-        d="M60 32 C60 32 70 32 72 42 C72 42 67 38 60 40"
+        d="M62 24 Q78 24 78 40 Q78 34 68 34 Q76 42 68 50 Q60 42 62 24 Z"
         fill="white"
-        opacity="0.9"
+        opacity="0.95"
       />
     </svg>
   )
@@ -133,14 +138,17 @@ export function LogoIcon({ size = 32, className = '' }: { size?: number; classNa
     >
       <defs>
         <linearGradient id="jf-icon-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#047857" />
+          <stop offset="0%" stopColor="#059669" />
           <stop offset="100%" stopColor="#10B981" />
         </linearGradient>
+        <filter id="jf-icon-shadow" x="-10%" y="-10%" width="120%" height="120%">
+          <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#059669" floodOpacity="0.2"/>
+        </filter>
       </defs>
 
-      <rect x="10" y="10" width="80" height="80" rx="18" fill="url(#jf-icon-grad)"/>
-      <path d="M35 30 L35 55 C35 65 42 70 50 70 C55 70 58 68 60 65" stroke="white" strokeWidth="7" strokeLinecap="round" fill="none"/>
-      <path d="M60 32 C60 32 70 32 72 42 C72 42 67 38 60 40" fill="white" opacity="0.9"/>
+      <rect x="8" y="8" width="84" height="84" rx="18" fill="url(#jf-icon-grad)" filter="url(#jf-icon-shadow)"/>
+      <path d="M36 26 L36 58 C36 70 44 78 56 78 C64 78 70 74 74 66" stroke="white" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      <path d="M62 24 Q78 24 78 40 Q78 34 68 34 Q76 42 68 50 Q60 42 62 24 Z" fill="white" opacity="0.95"/>
     </svg>
   )
 }
