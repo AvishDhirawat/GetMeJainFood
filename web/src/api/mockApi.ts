@@ -1,4 +1,5 @@
 // Mock API service for development without backend
+// Uses localStorage for data persistence across sessions
 import type {
   User,
   Provider,
@@ -25,17 +26,60 @@ import {
   generateOTP,
 } from './mockData'
 
+import { logger } from '../utils/logger'
+
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-let currentUser: User | null = null
-let currentToken: string | null = null
-let orders: Order[] = [...mockOrders]
-let providers: ProviderSearchResult[] = [...mockProviders]
-let menus: Record<string, Menu[]> = { ...mockMenus }
-let menuItems: Record<string, MenuItem[]> = { ...mockMenuItems }
+// Storage keys
+const STORAGE_KEYS = {
+  USER: 'jain-food-mock-user',
+  TOKEN: 'jain-food-mock-token',
+  ORDERS: 'jain-food-mock-orders',
+  PROVIDERS: 'jain-food-mock-providers',
+  MENUS: 'jain-food-mock-menus',
+  MENU_ITEMS: 'jain-food-mock-menu-items',
+  CHATS: 'jain-food-mock-chats',
+  MESSAGES: 'jain-food-mock-messages',
+}
+
+// Helper functions for localStorage persistence
+function loadFromStorage<T>(key: string, defaultValue: T): T {
+  try {
+    const stored = localStorage.getItem(key)
+    if (stored) {
+      return JSON.parse(stored)
+    }
+  } catch (error) {
+    logger.warn('MockApi', `Failed to load ${key} from storage`, { error })
+  }
+  return defaultValue
+}
+
+function saveToStorage<T>(key: string, value: T): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch (error) {
+    logger.error('MockApi', `Failed to save ${key} to storage`, { error })
+  }
+}
+
+// Initialize state from localStorage or defaults
+let currentUser: User | null = loadFromStorage<User | null>(STORAGE_KEYS.USER, null)
+let currentToken: string | null = loadFromStorage<string | null>(STORAGE_KEYS.TOKEN, null)
+let orders: Order[] = loadFromStorage<Order[]>(STORAGE_KEYS.ORDERS, [...mockOrders])
+let providers: ProviderSearchResult[] = loadFromStorage<ProviderSearchResult[]>(STORAGE_KEYS.PROVIDERS, [...mockProviders])
+let menus: Record<string, Menu[]> = loadFromStorage<Record<string, Menu[]>>(STORAGE_KEYS.MENUS, { ...mockMenus })
+let menuItems: Record<string, MenuItem[]> = loadFromStorage<Record<string, MenuItem[]>>(STORAGE_KEYS.MENU_ITEMS, { ...mockMenuItems })
 let otpStore: Record<string, string> = {}
-const chats: Chat[] = []
-const messages: ChatMessage[] = []
+let chats: Chat[] = loadFromStorage<Chat[]>(STORAGE_KEYS.CHATS, [])
+let messages: ChatMessage[] = loadFromStorage<ChatMessage[]>(STORAGE_KEYS.MESSAGES, [])
+
+// Persist changes helper
+function persistUser() {
+  saveToStorage(STORAGE_KEYS.USER, currentUser)
+  saveToStorage(STORAGE_KEYS.TOKEN, currentToken)
+}
+
 
 export const mockAuthApi = {
   sendOtp: async (phone: string): Promise<OtpResponse> => {
@@ -289,6 +333,39 @@ export const mockMediaApi = {
   },
 }
 
-export const resetMockData = () => { currentUser = null; currentToken = null; orders = []; otpStore = {} }
+// Reset all mock data (useful for testing)
+export const resetMockData = () => {
+  currentUser = null
+  currentToken = null
+  orders = [...mockOrders]
+  providers = [...mockProviders]
+  menus = { ...mockMenus }
+  menuItems = { ...mockMenuItems }
+  chats.length = 0
+  messages.length = 0
+  otpStore = {}
+
+  // Clear localStorage
+  Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key))
+  logger.info('MockApi', 'Mock data reset')
+}
+
+// Get current mock user (for debugging)
 export const getCurrentMockUser = () => currentUser
-export const setCurrentMockUser = (user: User | null) => { currentUser = user }
+
+// Set current mock user (for testing)
+export const setCurrentMockUser = (user: User | null) => {
+  currentUser = user
+  persistUser()
+  logger.info('MockApi', 'Mock user set', { userId: user?.id })
+}
+
+// Sync auth store with mock API on page load
+export const syncAuthWithMockApi = (token: string | null) => {
+  if (token && currentToken !== token) {
+    // Token from auth store doesn't match - might be stale
+    // Keep the persisted mock user if it exists
+    logger.debug('MockApi', 'Syncing auth state', { hasToken: !!token, hasUser: !!currentUser })
+  }
+  return { user: currentUser, token: currentToken }
+}

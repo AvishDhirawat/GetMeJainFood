@@ -13,6 +13,8 @@ import { useCartStore } from '../../store/cartStore'
 import { useAuthStore } from '../../store/authStore'
 import { useLocationStore } from '../../store/locationStore'
 import { orderApi } from '../../api/client'
+import { analytics } from '../../utils/monitoring'
+import { logger } from '../../utils/logger'
 
 export default function CartPage() {
   const navigate = useNavigate()
@@ -41,6 +43,10 @@ export default function CartPage() {
       return
     }
 
+    // Track checkout started
+    analytics.checkoutStarted(total, items.length)
+    logger.info('CartPage', 'Starting order placement', { itemCount: items.length, total })
+
     setIsPlacingOrder(true)
     try {
       const orderItems = items.map((item) => ({
@@ -59,8 +65,15 @@ export default function CartPage() {
       setOrderId(result.order_id)
       setOrderCode(result.order_code)
       setOrderOtp(result.otp || null)
+
+      // Track order created
+      analytics.orderCreated(result.order_id, total, items.length)
+      logger.info('CartPage', 'Order placed successfully', { orderId: result.order_id, orderCode: result.order_code })
+
       toast.success('Order placed successfully!')
     } catch (err) {
+      logger.error('CartPage', 'Failed to place order', { error: err })
+      analytics.error('order_creation_failed', String(err))
       toast.error('Failed to place order. Please try again.')
     } finally {
       setIsPlacingOrder(false)
@@ -72,10 +85,13 @@ export default function CartPage() {
 
     try {
       await orderApi.confirmOtp(orderId, orderOtp)
+      analytics.orderConfirmed(orderId)
+      logger.info('CartPage', 'Order confirmed', { orderId })
       toast.success('Order confirmed!')
       clearCart()
       navigate(`/orders/${orderId}`)
     } catch (err) {
+      logger.error('CartPage', 'Failed to confirm order', { orderId, error: err })
       toast.error('Failed to confirm order')
     }
   }

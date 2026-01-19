@@ -15,10 +15,10 @@ import { JAIN_TAGS } from '../types'
 // Hero Section Component
 function HeroSection() {
   return (
-    <section className="relative bg-gradient-to-br from-primary-500 via-primary-600 to-orange-500 text-white overflow-hidden">
+    <section className="relative bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 text-white overflow-hidden">
       <div className="absolute inset-0 bg-black/10" />
       <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
-      <div className="absolute -top-32 -left-32 w-96 h-96 bg-yellow-300/20 rounded-full blur-3xl" />
+      <div className="absolute -top-32 -left-32 w-96 h-96 bg-emerald-300/30 rounded-full blur-3xl" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
         <motion.div
@@ -29,7 +29,7 @@ function HeroSection() {
         >
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6">
             Pure Jain Food,<br />
-            <span className="text-yellow-300">Delivered Fresh</span>
+            <span className="text-emerald-200">Delivered Fresh</span>
           </h1>
           <p className="text-lg md:text-xl text-white/90 mb-8">
             Discover authentic Jain-compliant restaurants, cloud kitchens, and home cooks near you.

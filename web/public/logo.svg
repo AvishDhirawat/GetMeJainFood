@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#047857"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect x="51" y="51" width="410" height="410" rx="92" fill="url(#grad)"/>
+
+  <!-- Minimalist "J" -->
+  <path d="M179 154 L179 282 C179 333 215 359 256 359 C282 359 297 349 307 333" stroke="white" stroke-width="36" stroke-linecap="round" fill="none"/>
+
+  <!-- Simple leaf accent -->
+  <path d="M307 164 C307 164 359 164 369 215 C369 215 343 195 307 205" fill="white" opacity="0.9"/>
+</svg>

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="mainGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064E3B"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="50%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+    <radialGradient id="radial">
+      <stop offset="0%" stop-color="#ECFDF5"/>
+      <stop offset="100%" stop-color="#D1FAE5"/>
+    </radialGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <circle cx="256" cy="256" r="243" fill="url(#radial)" opacity="0.8"/>
+  <path d="M256 26 L422 122 L422 390 L256 486 L90 390 L90 122 Z" fill="none" stroke="url(#mainGrad)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <g filter="url(#glow)">
+    <path d="M218 141 L218 307 Q218 358 256 371 Q294 358 294 320" fill="none" stroke="url(#mainGrad)" stroke-width="31" stroke-linecap="round"/>
+    <circle cx="218" cy="141" r="20" fill="url(#mainGrad)"/>
+    <rect x="179" y="115" width="10" height="38" fill="url(#mainGrad)" opacity="0.6" rx="5"/>
+    <rect x="243" y="115" width="10" height="38" fill="url(#mainGrad)" opacity="0.6" rx="5"/>
+  </g>
+
+  <g transform="translate(333, 205)">
+    <path d="M0 0 Q38 -51, 64 -13 Q51 13, 26 20 Q38 38, 13 51 Q-13 26, 0 0 Z" fill="url(#mainGrad)" opacity="0.9"/>
+    <path d="M20 5 L31 31" stroke="#ECFDF5" stroke-width="4" stroke-linecap="round"/>
+  </g>
+
+  <ellipse cx="256" cy="397" rx="90" ry="20" fill="url(#goldGrad)" opacity="0.8"/>
+  <circle cx="179" cy="384" r="8" fill="url(#goldGrad)" opacity="0.7"/>
+  <circle cx="333" cy="384" r="8" fill="url(#goldGrad)" opacity="0.7"/>
+
+  <g opacity="0.6">
+    <path d="M141 179 L146 179 M143.5 176.5 L143.5 181.5" stroke="url(#goldGrad)" stroke-width="4" stroke-linecap="round"/>
+    <path d="M371 282 L376 282 M373.5 279.5 L373.5 284.5" stroke="url(#goldGrad)" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

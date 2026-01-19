@@ -1,6 +1,7 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import type { CartItem, MenuItem } from '../types'
+import { logger } from '../utils/logger'
 
 interface CartState {
   items: CartItem[]
@@ -40,12 +41,17 @@ export const useCartStore = create<CartState>()(
 
         // If adding from a different provider, clear cart first
         if (state.providerId && state.providerId !== providerId) {
+          logger.info('CartStore', 'Clearing cart - switching provider', {
+            oldProvider: state.providerId,
+            newProvider: providerId
+          })
           set({ items: [], providerId: null, providerName: null })
         }
 
         const existingItem = state.items.find(i => i.item.id === item.id)
 
         if (existingItem) {
+          logger.info('CartStore', 'Incrementing item quantity', { itemId: item.id, itemName: item.name })
           set({
             items: state.items.map(i =>
               i.item.id === item.id
@@ -56,6 +62,7 @@ export const useCartStore = create<CartState>()(
             providerName,
           })
         } else {
+          logger.info('CartStore', 'Adding new item to cart', { itemId: item.id, itemName: item.name, providerId })
           set({
             items: [...state.items, { item, quantity: 1, provider_id: providerId, provider_name: providerName }],
             providerId,
@@ -66,9 +73,13 @@ export const useCartStore = create<CartState>()(
 
       removeItem: (itemId: string) => {
         const state = get()
+        const itemToRemove = state.items.find(i => i.item.id === itemId)
+        logger.info('CartStore', 'Removing item from cart', { itemId, itemName: itemToRemove?.item.name })
+
         const newItems = state.items.filter(i => i.item.id !== itemId)
 
         if (newItems.length === 0) {
+          logger.info('CartStore', 'Cart is now empty')
           set({ items: [], providerId: null, providerName: null })
         } else {
           set({ items: newItems })
@@ -83,6 +94,7 @@ export const useCartStore = create<CartState>()(
           return
         }
 
+        logger.debug('CartStore', 'Updating item quantity', { itemId, quantity })
         set({
           items: state.items.map(i =>
             i.item.id === itemId
@@ -93,6 +105,7 @@ export const useCartStore = create<CartState>()(
       },
 
       clearCart: () => {
+        logger.info('CartStore', 'Clearing cart')
         set({ items: [], providerId: null, providerName: null })
       },
 
@@ -108,6 +121,12 @@ export const useCartStore = create<CartState>()(
     }),
     {
       name: 'jain-food-cart',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        items: state.items,
+        providerId: state.providerId,
+        providerName: state.providerName,
+      }),
     }
   )
 )

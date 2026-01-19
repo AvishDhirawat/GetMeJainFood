@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { useAuthStore } from './store/authStore'
@@ -32,6 +32,20 @@ import ProviderMenus from './pages/provider/Menus'
 import ProviderOrders from './pages/provider/Orders'
 import ProviderProfile from './pages/provider/Profile'
 import ProviderOnboarding from './pages/provider/Onboarding'
+
+// Page view tracking component
+function PageTracker() {
+  const location = useLocation()
+
+  useEffect(() => {
+    // Track page view
+    const pageName = location.pathname === '/' ? 'Home' :
+                     location.pathname.replace(/^\//, '').replace(/\//g, ' > ')
+    logger.info('Navigation', 'Page view', { page: pageName, path: location.pathname })
+  }, [location])
+
+  return null
+}
 
 
 function App() {
@@ -80,6 +94,7 @@ function App() {
   return (
     <ErrorBoundary>
       <Router>
+        <PageTracker />
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />

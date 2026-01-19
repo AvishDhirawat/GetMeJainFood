@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { logger } from '../utils/logger'
 
 interface LocationState {
@@ -97,11 +97,18 @@ export const useLocationStore = create<LocationState>()(
       },
 
       clearLocation: () => {
+        logger.info('LocationStore', 'Location cleared')
         set({ lat: null, lng: null, address: null, error: null })
       },
     }),
     {
       name: 'jain-food-location',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        lat: state.lat,
+        lng: state.lng,
+        address: state.address,
+      }),
     }
   )
 )

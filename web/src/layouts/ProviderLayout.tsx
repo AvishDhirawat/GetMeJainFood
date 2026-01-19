@@ -25,9 +25,7 @@ export default function ProviderLayout() {
           {/* Logo */}
           <div className="p-6 border-b">
             <Link to="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-lg">🌿</span>
-              </div>
+              <img src="/favicon.svg" alt="JainFood" className="w-10 h-10" />
               <div>
                 <span className="text-xl font-bold text-gray-900">JainFood</span>
                 <p className="text-xs text-gray-500">Provider Portal</p>
@@ -76,9 +74,7 @@ export default function ProviderLayout() {
       <header className="lg:hidden sticky top-0 z-40 bg-white shadow-sm">
         <div className="flex items-center justify-between px-4 h-16">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">🌿</span>
-            </div>
+            <img src="/favicon.svg" alt="JainFood" className="w-8 h-8" />
             <span className="font-bold text-gray-900">Provider</span>
           </Link>
         </div>

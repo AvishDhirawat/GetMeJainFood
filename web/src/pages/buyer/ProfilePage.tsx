@@ -12,6 +12,8 @@ import {
 } from '@heroicons/react/24/outline'
 import { useAuthStore } from '../../store/authStore'
 import { userApi } from '../../api/client'
+import { analytics } from '../../utils/monitoring'
+import { logger } from '../../utils/logger'
 
 export default function ProfilePage() {
   const navigate = useNavigate()
@@ -30,11 +32,24 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     setIsSaving(true)
+    logger.info('ProfilePage', 'Saving profile', { name, email })
     try {
       await userApi.updateMe({ name, email, preferences })
       updateUser({ name, email, preferences })
+
+      // Track profile update
+      const updatedFields = []
+      if (name !== user?.name) updatedFields.push('name')
+      if (email !== user?.email) updatedFields.push('email')
+      if (JSON.stringify(preferences) !== JSON.stringify(user?.preferences)) updatedFields.push('preferences')
+
+      analytics.profileUpdated(updatedFields)
+      analytics.preferencesChanged(preferences)
+      logger.info('ProfilePage', 'Profile saved successfully', { updatedFields })
+
       toast.success('Profile updated!')
-    } catch {
+    } catch (err) {
+      logger.error('ProfilePage', 'Failed to save profile', { error: err })
       toast.error('Failed to update profile')
     } finally {
       setIsSaving(false)
@@ -42,6 +57,8 @@ export default function ProfilePage() {
   }
 
   const handleLogout = () => {
+    logger.info('ProfilePage', 'User logging out')
+    analytics.logout()
     logout()
     navigate('/')
     toast.success('Logged out successfully')

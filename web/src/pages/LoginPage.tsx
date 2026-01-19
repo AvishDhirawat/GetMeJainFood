@@ -5,6 +5,8 @@ import toast from 'react-hot-toast'
 import { authApi, userApi } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { logger } from '../utils/logger'
+import { analytics } from '../utils/monitoring'
+import Logo from '../components/Logo'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -60,10 +62,21 @@ export default function LoginPage() {
     }
 
     setIsLoading(true)
+    logger.info('LoginPage', 'Verifying OTP', { role })
     try {
       const response = await authApi.verifyOtp(phone, otp, role)
       const user = await userApi.getMe()
       login(response.token, user)
+
+      // Track authentication
+      if (response.is_new) {
+        analytics.signup()
+        logger.info('LoginPage', 'New user signed up', { userId: user.id, role: user.role })
+      } else {
+        analytics.login('otp')
+        logger.info('LoginPage', 'User logged in', { userId: user.id, role: user.role })
+      }
+
       toast.success(response.is_new ? 'Account created successfully!' : 'Welcome back!')
 
       // Redirect based on role
@@ -74,7 +87,9 @@ export default function LoginPage() {
       } else {
         navigate(from)
       }
-    } catch {
+    } catch (err) {
+      logger.error('LoginPage', 'OTP verification failed', { error: err })
+      analytics.error('otp_verification_failed', String(err))
       toast.error('Invalid OTP. Please try again.')
     } finally {
       setIsLoading(false)
@@ -90,13 +105,9 @@ export default function LoginPage() {
       >
         {/* Logo */}
         <div className="text-center mb-8">
-          <img
-            src="/logo.svg"
-            alt="JainFood Logo"
-            className="w-20 h-20 mx-auto mb-4 drop-shadow-lg"
-          />
-          <h1 className="text-3xl font-bold text-gray-900">JainFood</h1>
-          <p className="text-gray-600 mt-2">Pure Jain Food Delivery</p>
+          <div className="flex justify-center mb-4">
+            <Logo size="xl" variant="full" />
+          </div>
         </div>
 
         {/* Card */}

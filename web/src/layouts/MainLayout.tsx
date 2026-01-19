@@ -7,19 +7,18 @@ import {
   ShoppingCartIcon,
   UserIcon,
   ClipboardDocumentListIcon,
-  MapPinIcon,
   Bars3Icon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 import { useAuthStore } from '../store/authStore'
 import { useCartStore } from '../store/cartStore'
-import { useLocationStore } from '../store/locationStore'
+import LocationSelector from '../components/LocationSelector'
+import Logo from '../components/Logo'
 
 export default function MainLayout() {
   const location = useLocation()
   const { isAuthenticated, user } = useAuthStore()
   const cartItems = useCartStore((state) => state.items)
-  const { address, getCurrentLocation, isLoading: locationLoading } = useLocationStore()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const totalCartItems = cartItems.reduce((sum, item) => sum + item.quantity, 0)
@@ -39,24 +38,14 @@ export default function MainLayout() {
           <div className="flex items-center justify-between h-16">
             {/* Logo & Location */}
             <div className="flex items-center gap-4">
-              <Link to="/" className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">🌿</span>
-                </div>
-                <span className="hidden sm:block text-xl font-bold text-gray-900">JainFood</span>
+              <Link to="/" className="flex items-center">
+                <Logo size="md" variant="horizontal" showText={true} />
               </Link>
 
               {/* Location Selector */}
-              <button
-                onClick={() => getCurrentLocation()}
-                className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors max-w-[200px]"
-                disabled={locationLoading}
-              >
-                <MapPinIcon className="w-4 h-4 text-primary-500 flex-shrink-0" />
-                <span className="text-sm text-gray-700 truncate">
-                  {locationLoading ? 'Getting location...' : address || 'Set location'}
-                </span>
-              </button>
+              <div className="hidden sm:block">
+                <LocationSelector />
+              </div>
             </div>
 
             {/* Desktop Navigation */}
@@ -135,6 +124,11 @@ export default function MainLayout() {
               className="md:hidden bg-white border-t"
             >
               <div className="px-4 py-4 space-y-2">
+                {/* Mobile Location Selector */}
+                <div className="pb-3 mb-3 border-b border-gray-100">
+                  <LocationSelector />
+                </div>
+
                 {navItems.map((item) => {
                   if (item.protected && !isAuthenticated) return null
                   const isActive = location.pathname === item.path
