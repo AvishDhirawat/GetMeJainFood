@@ -2,9 +2,7 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"runtime"
 	"strings"
 	"time"
 
