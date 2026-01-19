@@ -37,7 +37,10 @@ sudo systemctl enable postgresql
 # Setup database
 sudo -u postgres psql -c "CREATE DATABASE jain_food;"
 sudo -u postgres psql -d jain_food -c "CREATE EXTENSION postgis;"
-sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
+
+# Set a secure password for postgres user
+export POSTGRES_PASSWORD="your_secure_password_here"
+sudo -u postgres psql -c "ALTER USER postgres PASSWORD '$POSTGRES_PASSWORD';"
 ```
 
 ### 4. Install Redis
@@ -50,7 +53,8 @@ redis-cli ping  # Should return PONG
 
 ### 5. Run Migrations
 ```bash
-export PGPASSWORD=postgres
+# Use the password you set above
+export PGPASSWORD="$POSTGRES_PASSWORD"
 psql -h localhost -U postgres -d jain_food -f migrations/0001_init.up.sql
 psql -h localhost -U postgres -d jain_food -f migrations/0002_order_code.up.sql
 psql -h localhost -U postgres -d jain_food -f migrations/0003_orders_partitions_2026.up.sql
@@ -61,7 +65,8 @@ psql -h localhost -U postgres -d jain_food -f migrations/0004_orders_partitions_
 
 **Terminal 1 - Backend:**
 ```bash
-export DATABASE_URL="postgres://postgres:postgres@localhost:5432/jain_food?sslmode=disable"
+# Use the password you set above
+export DATABASE_URL="postgres://postgres:$POSTGRES_PASSWORD@localhost:5432/jain_food?sslmode=disable"
 export REDIS_ADDR="localhost:6379"
 export JWT_SECRET="dev-secret"
 export OTP_SECRET="dev-otp-secret"

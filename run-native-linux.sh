@@ -38,7 +38,7 @@ echo ""
 POSTGRES_HOST="${POSTGRES_HOST:-localhost}"
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
-POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-postgres}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-}"
 POSTGRES_DB="${POSTGRES_DB:-jain_food}"
 
 REDIS_HOST="${REDIS_HOST:-localhost}"
@@ -184,7 +184,8 @@ else
     echo "  3. Restart: sudo systemctl restart postgresql"
     echo ""
     echo "  Or set password for postgres user:"
-    echo "  sudo -u postgres psql -c \"ALTER USER postgres PASSWORD 'postgres';\""
+    echo "  sudo -u postgres psql -c \"ALTER USER postgres PASSWORD 'YOUR_SECURE_PASSWORD';\""
+    echo "  export POSTGRES_PASSWORD=YOUR_SECURE_PASSWORD"
     exit 1
 fi
 

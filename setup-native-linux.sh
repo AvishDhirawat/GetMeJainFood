@@ -107,7 +107,14 @@ sudo systemctl enable postgresql
 echo "  Setting up database..."
 sudo -u postgres psql -c "CREATE DATABASE jain_food;" 2>/dev/null || echo "  Database may already exist"
 sudo -u postgres psql -d jain_food -c "CREATE EXTENSION IF NOT EXISTS postgis;" 2>/dev/null || true
-sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';" 2>/dev/null || true
+
+# Set password from environment variable or prompt
+if [ -n "$POSTGRES_PASSWORD" ]; then
+    sudo -u postgres psql -c "ALTER USER postgres PASSWORD '$POSTGRES_PASSWORD';" 2>/dev/null || true
+else
+    echo -e "${YELLOW}  Note: Set POSTGRES_PASSWORD env var to configure the postgres password${NC}"
+    echo -e "${YELLOW}  Example: export POSTGRES_PASSWORD=your_secure_password${NC}"
+fi
 
 echo -e "${GREEN}PostgreSQL configured${NC}"
 
@@ -137,7 +144,8 @@ echo -e "${YELLOW}[6/6] Running database migrations...${NC}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-export PGPASSWORD=postgres
+# Use POSTGRES_PASSWORD from environment or default empty (peer auth)
+export PGPASSWORD="${POSTGRES_PASSWORD:-}"
 for migration in migrations/*.up.sql; do
     if [ -f "$migration" ]; then
         echo "  Applying: $(basename "$migration")"
