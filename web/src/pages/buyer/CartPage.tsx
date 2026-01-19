@@ -51,7 +51,7 @@ export default function CartPage() {
       }))
 
       const result = await orderApi.create({
-        provider_id: items[0].provider_id,
+        provider_id: items[0].providerId,
         items: orderItems,
         total: total,
       })

@@ -47,10 +47,15 @@ export default function LoginPage() {
         setDevOtp(response.otp)
         logger.debug('LoginPage', 'Dev OTP received', { otp: response.otp })
       }
+    } catch (err) {
+      const errorMsg = 'Failed to send OTP. Please try again.'
+      setError(errorMsg)
+      toast.error(errorMsg)
+      logger.error('LoginPage', 'Failed to send OTP', err)
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [phone])
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault()

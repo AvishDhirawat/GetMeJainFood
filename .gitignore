@@ -1,2 +1,11 @@
 # Coverage output
 coverage.out
+
+# Node modules
+node_modules/
+web/node_modules/
+package-lock.json
+web/package-lock.json
+
+# Build output
+web/dist/
