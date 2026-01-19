@@ -8,7 +8,6 @@ import type { Menu, MenuItem } from '../../types'
 
 export default function ProviderMenus() {
   const { user } = useAuthStore()
-  const queryClient = useQueryClient()
   const [showMenuModal, setShowMenuModal] = useState(false)
   const [showItemModal, setShowItemModal] = useState(false)
   const [selectedMenuId, setSelectedMenuId] = useState<string | null>(null)
