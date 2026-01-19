@@ -32,3 +32,12 @@ func Close() {
         Pool.Close()
     }
 }
+
+// Ping checks database connectivity
+func Ping(ctx context.Context) error {
+    if Pool == nil {
+        return nil
+    }
+    return Pool.Ping(ctx)
+}
+

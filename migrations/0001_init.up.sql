@@ -56,18 +56,22 @@ CREATE INDEX IF NOT EXISTS idx_menu_item_ingredients ON menu_items USING GIN (in
 
 -- orders partitioned by created_at
 CREATE TABLE IF NOT EXISTS orders (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID NOT NULL DEFAULT uuid_generate_v4(),
   buyer_id UUID REFERENCES users(id),
   provider_id UUID REFERENCES providers(id),
   items JSONB NOT NULL, -- array of { item_id, qty, price }
   total_estimate NUMERIC(12,2),
   status VARCHAR(32) NOT NULL DEFAULT 'CREATED',
   otp_hash TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (id, created_at)
 ) PARTITION BY RANGE (created_at);
 
--- create one initial partition for current month (script partitions in prod)
+-- create partitions for current and upcoming months
 CREATE TABLE IF NOT EXISTS orders_2025_11 PARTITION OF orders FOR VALUES FROM ('2025-11-01') TO ('2025-12-01');
+CREATE TABLE IF NOT EXISTS orders_2025_12 PARTITION OF orders FOR VALUES FROM ('2025-12-01') TO ('2026-01-01');
+CREATE TABLE IF NOT EXISTS orders_2026_01 PARTITION OF orders FOR VALUES FROM ('2026-01-01') TO ('2026-02-01');
+CREATE TABLE IF NOT EXISTS orders_2026_02 PARTITION OF orders FOR VALUES FROM ('2026-02-01') TO ('2026-03-01');
 
 CREATE INDEX IF NOT EXISTS idx_orders_provider ON orders(provider_id);
 CREATE INDEX IF NOT EXISTS idx_orders_buyer ON orders(buyer_id);

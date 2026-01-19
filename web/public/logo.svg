@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+    <linearGradient id="leafGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#34D399"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#059669" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Premium rounded square background with subtle shadow -->
+  <rect x="56" y="56" width="400" height="400" rx="80" fill="url(#grad)" filter="url(#shadow)"/>
+
+  <!-- Elegant "J" letterform -->
+  <path d="M195 150 L195 295 C195 355 225 385 280 385 C320 385 350 365 365 330"
+        stroke="white" stroke-width="42" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Premium leaf with elegant curve -->
+  <path d="M320 135 Q395 135 395 210 Q395 175 350 175 Q385 210 350 245 Q315 210 320 135 Z"
+        fill="white" opacity="0.95"/>
+
+  <!-- Leaf vein detail -->
+  <path d="M355 165 Q360 195 345 220" stroke="url(#grad)" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.4"/>
+</svg>

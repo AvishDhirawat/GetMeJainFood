@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#059669" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <!-- Premium rounded square with subtle shadow -->
+  <rect x="16" y="16" width="160" height="160" rx="32" fill="url(#grad)" filter="url(#shadow)"/>
+
+  <!-- Elegant "J" letterform -->
+  <path d="M70 52 L70 108 C70 132 84 144 104 144 C120 144 132 136 140 122"
+        stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Premium leaf -->
+  <path d="M118 44 Q148 44 148 74 Q148 62 132 62 Q144 78 132 94 Q120 78 118 44 Z"
+        fill="white" opacity="0.95"/>
+
+  <!-- Leaf vein -->
+  <path d="M133 56 Q136 70 130 82" stroke="url(#grad)" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.35"/>
+</svg>

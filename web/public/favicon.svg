@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Clean rounded square -->
+  <rect x="8" y="8" width="84" height="84" rx="18" fill="url(#grad)"/>
+
+  <!-- Bold "J" optimized for favicon size -->
+  <path d="M36 26 L36 58 C36 70 44 78 56 78 C64 78 70 74 74 66"
+        stroke="white" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Simple elegant leaf -->
+  <path d="M62 24 Q78 24 78 40 Q78 34 68 34 Q76 42 68 50 Q60 42 62 24 Z"
+        fill="white" opacity="0.95"/>
+</svg>
