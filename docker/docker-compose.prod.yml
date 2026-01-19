@@ -1,7 +1,12 @@
 
 # Production environment - optimized for security and performance
+# Usage: docker compose --env-file ../.env -f docker-compose.prod.yml up -d
+
+name: jain-food
+
 services:
   postgres:
+    container_name: jain_food-postgres
     image: postgis/postgis:15-3.4
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -25,6 +30,7 @@ services:
     restart: always
 
   redis:
+    container_name: jain_food-redis
     image: redis:7-alpine
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
@@ -43,6 +49,7 @@ services:
     restart: always
 
   minio:
+    container_name: jain_food-minio
     image: minio/minio
     command: server /data --console-address ":9001"
     environment:
@@ -65,6 +72,7 @@ services:
     restart: always
 
   api:
+    container_name: jain_food-api
     build:
       context: ..
       dockerfile: Dockerfile
@@ -109,6 +117,7 @@ services:
       start_period: 40s
 
   web:
+    container_name: jain_food-web
     build:
       context: ../web
       dockerfile: Dockerfile

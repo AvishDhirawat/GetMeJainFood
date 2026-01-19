@@ -146,7 +146,6 @@ Decision: Go chosen for performance, concurrency, and team preference; admin UI 
 5. Observability & partition maintenance automation.
 6. Hardening: rate limits, verification workflow, image variants.
 7. Service extraction (as needed).
-
 ## 11. Running the Application
 
 ### Quick Start (One Command!)
@@ -199,14 +198,21 @@ Decision: Go chosen for performance, concurrency, and team preference; admin UI 
 | API | http://localhost:8080 | Go backend |
 | API Health | http://localhost:8080/health | Health check endpoint |
 | MinIO Console | http://localhost:9001 | Object storage admin (minioadmin/minioadmin) |
-
+| MinIO Console | http://localhost:9001 | Object storage admin (credentials in .env) |
 ### Configuration
 
 Environment files are in `configs/`:
-- `.env.dev` - Development settings (pre-configured)
-- `.env.qa` - QA settings (configure before use)
-- `.env.prod.example` - Production template (copy and configure)
+First, create your environment file:
+```bash
+cp .env.example .env
+# Edit .env with your configuration values
+```
 
+Environment variables:
+- `POSTGRES_PASSWORD` - Database password (required)
+- `JWT_SECRET` - JWT signing key (required)
+- `OTP_SECRET` - OTP signing key (required)
+- `S3_ACCESS_KEY` / `S3_SECRET_KEY` - MinIO credentials
 ### Architecture (Services)
 
 ```

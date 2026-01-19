@@ -240,14 +240,25 @@ echo ""
 echo -e "${YELLOW}[5/6] Setting up environment...${NC}"
 echo ""
 
+# Check required secrets
+if [ -z "$JWT_SECRET" ]; then
+    echo -e "${YELLOW}JWT_SECRET not set. Generating a random one for development...${NC}"
+    JWT_SECRET=$(openssl rand -base64 32 | tr -d '\n')
+fi
+
+if [ -z "$OTP_SECRET" ]; then
+    echo -e "${YELLOW}OTP_SECRET not set. Generating a random one for development...${NC}"
+    OTP_SECRET=$(openssl rand -base64 32 | tr -d '\n')
+fi
+
 # Create .env file for the application
 cat > .env << EOF
 # Auto-generated for native Linux setup
 PORT=8080
 DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable
 REDIS_ADDR=${REDIS_HOST}:${REDIS_PORT}
-JWT_SECRET=dev-jwt-secret-change-in-production
-OTP_SECRET=dev-otp-secret-change-in-production
+JWT_SECRET=${JWT_SECRET}
+OTP_SECRET=${OTP_SECRET}
 EOF
 
 # Add MinIO config if provided
