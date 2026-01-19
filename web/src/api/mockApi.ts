@@ -30,7 +30,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 let currentUser: User | null = null
 let currentToken: string | null = null
 let orders: Order[] = [...mockOrders]
-let providers: ProviderSearchResult[] = [...mockProviders]
+const providers: ProviderSearchResult[] = [...mockProviders]
 let menus: Record<string, Menu[]> = { ...mockMenus }
 let menuItems: Record<string, MenuItem[]> = { ...mockMenuItems }
 let otpStore: Record<string, string> = {}
