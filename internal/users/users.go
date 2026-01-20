@@ -121,3 +121,32 @@ func ListUsers(ctx context.Context, limit, offset int) ([]*models.User, error) {
 	}
 	return users, nil
 }
+
+// BlockUser blocks a user (admin only)
+func BlockUser(ctx context.Context, userID, reason string) error {
+	ct, err := db.Pool.Exec(ctx, `
+		UPDATE users SET blocked = true, blocked_reason = $2 WHERE id = $1
+	`, userID, reason)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
+}
+
+// UnblockUser unblocks a user (admin only)
+func UnblockUser(ctx context.Context, userID string) error {
+	ct, err := db.Pool.Exec(ctx, `
+		UPDATE users SET blocked = false, blocked_reason = NULL WHERE id = $1
+	`, userID)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
+}
+

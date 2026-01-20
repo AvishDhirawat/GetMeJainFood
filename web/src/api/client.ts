@@ -13,6 +13,7 @@ import type {
   OtpResponse,
   ProviderSearchResult,
   ItemSearchResult,
+  Review,
 } from '../types'
 
 // Import mock APIs for development mode
@@ -26,6 +27,7 @@ import {
   mockOrderApi,
   mockChatApi,
   mockMediaApi,
+  mockReviewApi,
 } from './mockApi'
 
 const API_BASE_URL = '/v1'
@@ -247,6 +249,7 @@ export const searchApi = {
     radius?: number
     tags?: string[]
     min_rating?: number
+    provider_category?: string
     limit?: number
     offset?: number
   }): Promise<ProviderSearchResult[]> => {
@@ -373,6 +376,48 @@ export const mediaApi = {
     if (USE_MOCK_API) return mockMediaApi.getDownloadUrl(objectKey)
     const { data } = await api.post('/media/download-url', { object_key: objectKey })
     return data
+  },
+}
+
+// ==================== REVIEW API ====================
+export const reviewApi = {
+  getByProvider: async (providerId: string, limit = 20, offset = 0): Promise<Review[]> => {
+    if (USE_MOCK_API) return mockReviewApi.getByProvider(providerId, limit, offset)
+    const { data } = await api.get(`/reviews/provider/${providerId}`, { params: { limit, offset } })
+    return data || []
+  },
+
+  getStats: async (providerId: string): Promise<{
+    average_rating: number
+    total_reviews: number
+    rating_counts: { [key: string]: number }
+  }> => {
+    if (USE_MOCK_API) return mockReviewApi.getStats(providerId)
+    const { data } = await api.get(`/reviews/provider/${providerId}/stats`)
+    return data
+  },
+
+  create: async (review: {
+    provider_id: string
+    order_id?: string
+    rating: number
+    comment: string
+    photo_urls?: string[]
+  }): Promise<Review> => {
+    if (USE_MOCK_API) return mockReviewApi.create(review)
+    const { data } = await api.post('/reviews', review)
+    return data
+  },
+
+  getMyReviews: async (limit = 20, offset = 0): Promise<Review[]> => {
+    if (USE_MOCK_API) return mockReviewApi.getMyReviews(limit, offset)
+    const { data } = await api.get('/reviews/my', { params: { limit, offset } })
+    return data || []
+  },
+
+  delete: async (reviewId: string): Promise<void> => {
+    if (USE_MOCK_API) return mockReviewApi.delete(reviewId)
+    await api.delete(`/reviews/${reviewId}`)
   },
 }
 

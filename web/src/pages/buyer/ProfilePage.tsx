@@ -9,11 +9,52 @@ import {
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   ShieldCheckIcon,
+  GlobeAltIcon,
 } from '@heroicons/react/24/outline'
 import { useAuthStore } from '../../store/authStore'
+import { useLanguageStore } from '../../store/languageStore'
 import { userApi } from '../../api/client'
 import { analytics } from '../../utils/monitoring'
 import { logger } from '../../utils/logger'
+
+// Language Option Component
+function LanguageOption() {
+  const { language, setLanguage } = useLanguageStore()
+
+  return (
+    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+      <div className="flex items-center gap-3">
+        <GlobeAltIcon className="w-5 h-5 text-primary-500" />
+        <div>
+          <p className="font-medium text-gray-900">Language / भाषा</p>
+          <p className="text-sm text-gray-500">{language === 'en' ? 'English' : 'हिन्दी'}</p>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => setLanguage('en')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            language === 'en'
+              ? 'bg-primary-500 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          EN
+        </button>
+        <button
+          onClick={() => setLanguage('hi')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            language === 'hi'
+              ? 'bg-primary-500 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+          }`}
+        >
+          हिन्दी
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export default function ProfilePage() {
   const navigate = useNavigate()
@@ -190,7 +231,11 @@ export default function ProfilePage() {
             <Cog6ToothIcon className="w-5 h-5 text-primary-500" />
             Settings
           </h3>
-          <label className="flex items-center justify-between p-3 bg-gray-50 rounded-xl cursor-pointer">
+
+          {/* Language Selection */}
+          <LanguageOption />
+
+          <label className="flex items-center justify-between p-3 bg-gray-50 rounded-xl cursor-pointer mt-3">
             <div>
               <p className="font-medium text-gray-900">Push Notifications</p>
               <p className="text-sm text-gray-500">Order updates, offers, and more</p>
@@ -202,6 +247,18 @@ export default function ProfilePage() {
               className="w-5 h-5 rounded text-primary-500"
             />
           </label>
+
+          {/* FAQ Link */}
+          <button
+            onClick={() => navigate('/faq')}
+            className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-xl mt-3 hover:bg-gray-100 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-xl">❓</span>
+              <p className="font-medium text-gray-900">FAQ & Help</p>
+            </div>
+            <span className="text-gray-400">→</span>
+          </button>
         </div>
 
         {/* Save Button */}

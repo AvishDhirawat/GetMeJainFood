@@ -9,25 +9,30 @@ import {
   ClipboardDocumentListIcon,
   Bars3Icon,
   XMarkIcon,
+  QuestionMarkCircleIcon,
 } from '@heroicons/react/24/outline'
 import { useAuthStore } from '../store/authStore'
 import { useCartStore } from '../store/cartStore'
+import { useLanguageStore } from '../store/languageStore'
 import LocationSelector from '../components/LocationSelector'
+import LanguageSelector from '../components/LanguageSelector'
 import Logo from '../components/Logo'
 
 export default function MainLayout() {
   const location = useLocation()
   const { isAuthenticated, user } = useAuthStore()
   const cartItems = useCartStore((state) => state.items)
+  const { t } = useLanguageStore()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const totalCartItems = cartItems.reduce((sum, item) => sum + item.quantity, 0)
 
   const navItems = [
-    { path: '/', label: 'Home', icon: HomeIcon },
-    { path: '/search', label: 'Search', icon: MagnifyingGlassIcon },
-    { path: '/orders', label: 'Orders', icon: ClipboardDocumentListIcon, protected: true },
-    { path: '/profile', label: 'Profile', icon: UserIcon, protected: true },
+    { path: '/', labelKey: 'nav.home', icon: HomeIcon },
+    { path: '/search', labelKey: 'nav.search', icon: MagnifyingGlassIcon },
+    { path: '/faq', labelKey: 'faq.title', icon: QuestionMarkCircleIcon },
+    { path: '/orders', labelKey: 'nav.orders', icon: ClipboardDocumentListIcon, protected: true },
+    { path: '/profile', labelKey: 'nav.profile', icon: UserIcon, protected: true },
   ]
 
   return (
@@ -62,7 +67,7 @@ export default function MainLayout() {
                     }`}
                   >
                     <item.icon className="w-5 h-5" />
-                    {item.label}
+                    {t(item.labelKey)}
                   </Link>
                 )
               })}
@@ -73,13 +78,16 @@ export default function MainLayout() {
                 className="relative flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900"
               >
                 <ShoppingCartIcon className="w-5 h-5" />
-                Cart
+                {t('nav.cart')}
                 {totalCartItems > 0 && (
                   <span className="absolute -top-2 -right-2 w-5 h-5 bg-primary-500 text-white text-xs rounded-full flex items-center justify-center">
                     {totalCartItems}
                   </span>
                 )}
               </Link>
+
+              {/* Language Selector */}
+              <LanguageSelector />
 
               {/* Auth */}
               {isAuthenticated ? (
@@ -142,7 +150,7 @@ export default function MainLayout() {
                       }`}
                     >
                       <item.icon className="w-5 h-5" />
-                      {item.label}
+                      {t(item.labelKey)}
                     </Link>
                   )
                 })}
@@ -152,7 +160,7 @@ export default function MainLayout() {
                   className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-600"
                 >
                   <ShoppingCartIcon className="w-5 h-5" />
-                  Cart {totalCartItems > 0 && `(${totalCartItems})`}
+                  {t('nav.cart')} {totalCartItems > 0 && `(${totalCartItems})`}
                 </Link>
                 {!isAuthenticated && (
                   <Link
@@ -160,7 +168,7 @@ export default function MainLayout() {
                     onClick={() => setMobileMenuOpen(false)}
                     className="block w-full text-center px-4 py-2 bg-primary-500 text-white rounded-lg"
                   >
-                    Login
+                    {t('auth.login')}
                   </Link>
                 )}
               </div>
@@ -186,7 +194,7 @@ export default function MainLayout() {
                   className="flex flex-col items-center gap-0.5 px-3 py-1 text-gray-400"
                 >
                   <item.icon className="w-6 h-6" />
-                  <span className="text-xs">{item.label}</span>
+                  <span className="text-xs">{t(item.labelKey)}</span>
                 </Link>
               )
             }
@@ -200,7 +208,7 @@ export default function MainLayout() {
                 }`}
               >
                 <item.icon className="w-6 h-6" />
-                <span className="text-xs">{item.label}</span>
+                <span className="text-xs">{t(item.labelKey)}</span>
               </Link>
             )
           })}
@@ -211,7 +219,7 @@ export default function MainLayout() {
             }`}
           >
             <ShoppingCartIcon className="w-6 h-6" />
-            <span className="text-xs">Cart</span>
+            <span className="text-xs">{t('nav.cart')}</span>
             {totalCartItems > 0 && (
               <span className="absolute top-0 right-1 w-4 h-4 bg-primary-500 text-white text-[10px] rounded-full flex items-center justify-center">
                 {totalCartItems}

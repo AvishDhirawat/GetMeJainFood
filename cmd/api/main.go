@@ -24,6 +24,7 @@ import (
 	"jainfood/internal/orders"
 	"jainfood/internal/providers"
 	"jainfood/internal/redisclient"
+	"jainfood/internal/reviews"
 	"jainfood/internal/search"
 	"jainfood/internal/users"
 	"jainfood/internal/util"
@@ -253,6 +254,20 @@ func main() {
 				}
 				c.JSON(200, gin.H{"message": "deleted"})
 			})
+
+			// Admin: List all users
+			userGroup.GET("", middleware.RoleMiddleware("admin"), func(c *gin.Context) {
+				limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+				offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+
+				list, err := users.ListUsers(ctx, limit, offset)
+				if err != nil {
+					c.JSON(500, gin.H{"error": "failed to list users"})
+					return
+				}
+				c.JSON(200, list)
+			})
+
 		}
 
 		// ==================== PROVIDER ROUTES ====================
@@ -354,6 +369,35 @@ func main() {
 				})
 
 				c.JSON(200, gin.H{"message": "verification status updated"})
+			})
+
+			// Admin: Block provider
+			providerGroup.POST("/:id/block", middleware.AuthMiddleware(cfg.JwtSecret), middleware.RoleMiddleware("admin"), func(c *gin.Context) {
+				providerID := c.Param("id")
+				var body struct {
+					Reason string `json:"reason" binding:"required"`
+				}
+				if err := c.ShouldBindJSON(&body); err != nil {
+					c.JSON(400, gin.H{"error": err.Error()})
+					return
+				}
+
+				if err := providers.BlockProvider(ctx, providerID, body.Reason); err != nil {
+					c.JSON(500, gin.H{"error": "block failed"})
+					return
+				}
+				c.JSON(200, gin.H{"message": "provider blocked"})
+			})
+
+			// Admin: Unblock provider
+			providerGroup.POST("/:id/unblock", middleware.AuthMiddleware(cfg.JwtSecret), middleware.RoleMiddleware("admin"), func(c *gin.Context) {
+				providerID := c.Param("id")
+
+				if err := providers.UnblockProvider(ctx, providerID); err != nil {
+					c.JSON(500, gin.H{"error": "unblock failed"})
+					return
+				}
+				c.JSON(200, gin.H{"message": "provider unblocked"})
 			})
 		}
 
@@ -745,6 +789,103 @@ func main() {
 				_ = events.LogEvent(ctx, "order", orderID, events.EventOrderCompleted, map[string]interface{}{})
 
 				c.JSON(200, gin.H{"message": "order completed"})
+			})
+		}
+
+		// ==================== REVIEW ROUTES ====================
+		reviewGroup := v1.Group("/reviews")
+		{
+			// Public: Get reviews by provider
+			reviewGroup.GET("/provider/:provider_id", func(c *gin.Context) {
+				providerID := c.Param("provider_id")
+				limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+				offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+
+				list, err := reviews.GetReviewsByProvider(ctx, providerID, limit, offset)
+				if err != nil {
+					c.JSON(500, gin.H{"error": "failed to get reviews"})
+					return
+				}
+				c.JSON(200, list)
+			})
+
+			// Public: Get review stats for provider
+			reviewGroup.GET("/provider/:provider_id/stats", func(c *gin.Context) {
+				providerID := c.Param("provider_id")
+				stats, err := reviews.GetProviderReviewStats(ctx, providerID)
+				if err != nil {
+					c.JSON(500, gin.H{"error": "failed to get review stats"})
+					return
+				}
+				c.JSON(200, stats)
+			})
+
+			// Protected: Create review
+			reviewGroup.POST("", middleware.AuthMiddleware(cfg.JwtSecret), func(c *gin.Context) {
+				userID, _ := middleware.GetUserIDFromContext(c)
+				var body struct {
+					ProviderID string   `json:"provider_id" binding:"required"`
+					OrderID    string   `json:"order_id"`
+					Rating     int      `json:"rating" binding:"required,min=1,max=5"`
+					Comment    string   `json:"comment"`
+					PhotoURLs  []string `json:"photo_urls"`
+				}
+				if err := c.ShouldBindJSON(&body); err != nil {
+					c.JSON(400, gin.H{"error": err.Error()})
+					return
+				}
+
+				review, err := reviews.CreateReview(ctx, body.ProviderID, userID, body.OrderID, body.Rating, body.Comment, body.PhotoURLs)
+				if err != nil {
+					logger.Error("review creation failed", zap.Error(err))
+					c.JSON(500, gin.H{"error": "review creation failed"})
+					return
+				}
+
+				_ = events.LogEvent(ctx, "review", review.ID, events.EventReviewCreated, map[string]interface{}{
+					"provider_id": body.ProviderID,
+					"user_id":     userID,
+					"rating":      body.Rating,
+				})
+
+				c.JSON(201, review)
+			})
+
+			// Protected: Get my reviews
+			reviewGroup.GET("/my", middleware.AuthMiddleware(cfg.JwtSecret), func(c *gin.Context) {
+				userID, _ := middleware.GetUserIDFromContext(c)
+				limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+				offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+
+				list, err := reviews.GetReviewsByUser(ctx, userID, limit, offset)
+				if err != nil {
+					c.JSON(500, gin.H{"error": "failed to get reviews"})
+					return
+				}
+				c.JSON(200, list)
+			})
+
+			// Protected: Delete my review
+			reviewGroup.DELETE("/:id", middleware.AuthMiddleware(cfg.JwtSecret), func(c *gin.Context) {
+				userID, _ := middleware.GetUserIDFromContext(c)
+				reviewID := c.Param("id")
+
+				if err := reviews.DeleteReview(ctx, reviewID, userID); err != nil {
+					c.JSON(500, gin.H{"error": "deletion failed"})
+					return
+				}
+				c.JSON(200, gin.H{"message": "deleted"})
+			})
+
+			// Admin: Delete any review
+			reviewGroup.DELETE("/:id/admin", middleware.AuthMiddleware(cfg.JwtSecret), middleware.RoleMiddleware("admin"), func(c *gin.Context) {
+				reviewID := c.Param("id")
+
+				if err := reviews.DeleteReviewAdmin(ctx, reviewID); err != nil {
+					c.JSON(500, gin.H{"error": "deletion failed"})
+					return
+				}
+				c.JSON(200, gin.H{"message": "deleted"})
 			})
 		}
 

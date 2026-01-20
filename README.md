@@ -1,217 +1,286 @@
-# Jain Food App
+# GetMeJainFood 🍛
 
-Two-sided Jain-specific food discovery and ordering platform (buyers & providers) built in Go. Focus: strictly Jain dietary compliance, menu transparency, OTP-based order confirmation (no in-app payment yet), lightweight chat/call coordination between buyer and provider.
+A two-sided Jain-specific food discovery and ordering platform connecting buyers with food providers. Built with Go (backend) and React/TypeScript (frontend), focusing on strictly Jain dietary compliance, menu transparency, and seamless ordering experience.
 
-## 1. Goals & Non-Goals
+## 🌟 Features
 
-### Goals
-* Location + filter-based discovery (Jain tags: no root veggies, sattvic, etc.).
-* Provider onboarding: cloud kitchens, home cooks, hotels.
-* Menu & availability management (real-time toggle).
-* Cart + OTP order confirmation (no payment capture now).
-* Chat + optional masked call connect (3rd party voice API later).
-* Basic KYC / verification for providers.
-* Scalable path: modular monolith -> service extraction.
+### For Buyers
+- **Location-based Discovery** - Find Jain-compliant food providers near you
+- **Advanced Filters** - Filter by dietary preferences (Sattvic, No Root Veggies, Pure Jain, etc.)
+- **Provider Categories** - Browse by type (Tiffin Center, Caterer, Bhojnalaya, Restaurant, Home Chef, etc.)
+- **Food Categories** - Search by food type (Thali, Sweets, Bakery, Namkeen, Dry Fruits, etc.)
+- **Reviews & Ratings** - Read and write reviews for providers
+- **Multi-language Support** - English & Hindi (हिन्दी) interface
+- **Cart & Orders** - Easy ordering with OTP-based confirmation
 
-### Non-Goals (MVP)
-* Payment gateway, wallet, refund flows.
-* Delivery routing / logistics optimization.
-* Advanced ML personalization.
+### For Providers
+- **Easy Onboarding** - 5-step registration with Aadhar verification
+- **Menu Management** - Create and manage menus with real-time availability toggle
+- **Order Management** - View and manage incoming orders
+- **Dashboard** - Track orders, ratings, and performance
 
-## 2. High-Level Architecture
+### For Admins
+- **User Management** - View, block/unblock users
+- **Provider Verification** - Verify and manage providers
+- **Review Moderation** - Monitor and moderate reviews
+- **Analytics Dashboard** - Platform overview and statistics
+
+## 🛠 Tech Stack
+
+### Backend (Go)
+- **Framework:** Gin
+- **Database:** PostgreSQL with PostGIS (geospatial queries)
+- **Cache/Sessions:** Redis
+- **Auth:** JWT + OTP (HMAC-SHA256)
+- **Logging:** Zap
+- **Object Storage:** S3-compatible (MinIO for dev)
+
+### Frontend (React/TypeScript)
+- **Framework:** React 18 with Vite
+- **Styling:** Tailwind CSS
+- **State Management:** Zustand
+- **Data Fetching:** TanStack Query
+- **Animations:** Framer Motion
+- **Icons:** Heroicons
+
+### Infrastructure
+- **Containerization:** Docker & Docker Compose
+- **Environments:** Development, QA, Production configs
+
+## 📁 Project Structure
 
 ```
-Clients (React Native Mobile / React Web)  
-	|  REST + WebSocket (JWT)  
-API Edge (Gin + Middleware: Auth, Rate Limit, Logging)  
-	|- Auth / OTP Module  
-	|- User & Provider Module  
-	|- Menu & Items Module  
-	|- Search/Geo Module (Postgres + PostGIS, future: external search)  
-	|- Order Module (partitioned tables, OTP confirm, event log)  
-	|- Chat Module (WS, Redis PubSub; future: dedicated service)  
-	|- Media Module (signed URLs to object storage)  
-
-Infra: Postgres (primary + partitions), Redis (cache, rate-limit, OTP), Object Storage (S3/GCS), Optional MQ (NATS/Kafka) for async events.  
-Observability: Prometheus + Grafana, OpenTelemetry traces, structured logs (zap).  
-CI/CD: GitHub Actions -> Docker images -> Deploy (Kubernetes or ECS/Fargate).  
+GetMeJainFood/
+├── cmd/api/main.go           # API entry point & route definitions
+├── internal/                  # Backend modules
+│   ├── auth/                 # OTP generation & verification
+│   ├── chat/                 # WebSocket chat
+│   ├── db/                   # Database connection
+│   ├── events/               # Event logging
+│   ├── media/                # S3 file uploads
+│   ├── menus/                # Menu & item management
+│   ├── middleware/           # Auth, CORS, rate limiting
+│   ├── models/               # Data models
+│   ├── orders/               # Order management
+│   ├── providers/            # Provider CRUD
+│   ├── reviews/              # Review system
+│   ├── search/               # Geo-based search
+│   └── users/                # User management
+├── migrations/               # SQL migrations
+│   ├── 0001_init.up.sql
+│   ├── 0002_order_code.up.sql
+│   ├── 0003_orders_partitions_2026.up.sql
+│   ├── 0004_orders_partitions_current.up.sql
+│   └── 0005_enhanced_features.up.sql
+├── web/                      # React frontend
+│   ├── src/
+│   │   ├── api/             # API client & mock data
+│   │   ├── components/      # Reusable components
+│   │   ├── layouts/         # Page layouts
+│   │   ├── pages/           # Route pages
+│   │   │   ├── admin/       # Admin dashboard pages
+│   │   │   ├── buyer/       # Buyer pages (cart, orders, profile)
+│   │   │   └── provider/    # Provider pages (dashboard, menus)
+│   │   ├── store/           # Zustand stores
+│   │   ├── types/           # TypeScript types
+│   │   └── utils/           # Utilities
+│   └── package.json
+└── docker/                   # Docker compose files
 ```
 
-MVP uses a modular monolith with clear package boundaries under `internal/`. Extraction path: split Chat, Search, Order into services once load or team size increases.
+## 🚀 Quick Start
 
-## 3. Low-Level Architecture
+### Prerequisites
+- **Docker Desktop** (required)
+- **Go 1.20+** (for local development)
+- **Node.js 20+** (for local development)
 
-### Auth / OTP
-* Phone-based login/registration. 6-digit OTP generated with crypto rand; hashed (HMAC-SHA256) & stored in Redis with TTL (5–10m).
-* JWT access (short-lived) + refresh tokens (future). Roles: `buyer`, `provider`, `admin`.
-* Rate limiting on OTP send & verify endpoints.
-
-### Users / Providers
-* Users hold profile + Jain preference flags.
-* Providers reference user row; store geo point (PostGIS), tags, verification status.
-* Verification workflow: upload docs -> admin review -> set `verified=true`.
-
-### Menus / Items
-* CRUD via provider dashboard/app. Items embed Jain compliance flags; ingredient tags for filtering.
-* Search indexes (tsvector + GIN) already seeded in migration for name & ingredients.
-
-### Orders & Unique Order Code
-* Lifecycle: `CREATED` -> `PENDING_PROVIDER_ACK` (future) -> `CONFIRMED` (OTP) -> `COMPLETED` / `CANCELLED`.
-* Partitioned by `created_at` month for scalable storage & pruning.
-* Two identifiers:
-  - Internal UUID (`id`) for database relations.
-  - External human-friendly `order_code` (added in migration 0002) generated at creation.
-* Format proposal: `JF-<ULID>` (e.g., `JF-01HZY0K7C5N4Y9QB9Q4K3E3T`). ULID provides time-sortable, globally unique IDs. We may display a shortened form (first 10 chars after prefix) in UI while storing full value.
-* Uniqueness in partitioned table: unique index on `(order_code, created_at)`; ULID entropy keeps collisions practically impossible.
-
-### Chat
-* Initial WebSocket endpoint multiplexed by chat/order IDs; persistence in Postgres (`chats`, `messages`).
-* Scaling path: move real-time layer to separate service w/ Redis PubSub or NATS streaming.
-
-### Search & Geo
-* Nearby providers via PostGIS `ST_DWithin(geo, POINT, radius)`.
-* Filter pipeline: Jain flags, tags, rating, price range (future), availability.
-* Later: external search (Typesense / Elastic) for fuzzy queries + pre-ranked results.
-
-### Media
-* Provider & item images stored in object storage with signed PUT/GET URLs.
-* Basic image variant generation deferred to async task queue later.
-
-### Events
-* Append-only `events` table for audit & replay (e.g., ORDER_CONFIRMED). Can feed analytics or future CQRS read models.
-
-## 4. Data Model (Key Tables)
-See `migrations/0001_init.up.sql` and `0002_order_code.up.sql` (to be added). Core additions:
-* `orders(order_code TEXT NOT NULL, UNIQUE(order_code, created_at))`.
-
-## 5. API Surface (Representative)
-```
-POST /auth/send-otp { phone }
-POST /auth/verify-otp { phone, otp }
-POST /providers       (create provider)
-GET  /providers/:id
-POST /menus           (create menu)
-POST /menu-items      (add item)
-GET  /search?lat=&lng=&radius=&filters=
-POST /orders          { buyer_id, provider_id, items, total_estimate }
-POST /orders/:id/confirm-otp { otp }
-GET  /orders/:code    (lookup by order_code)
-WS   /ws/chat?chat_id=...
-```
-
-## 6. Order Code Generation (Go)
-Used in `internal/orders/orders.go`:
-* Library: `github.com/oklog/ulid/v2`.
-* Entropy source: crypto rand + monotonic wrapper.
-* Function: `GenerateOrderCode() string` returns `JF-<ulid>`.
-* Stored alongside UUID in insert statement.
-
-## 7. Tech Stack (Go Focus)
-* Framework: `gin-gonic/gin`.
-* DB: Postgres + PostGIS (geo), partitions for orders.
-* Cache/OTP: Redis.
-* Logging: zap.
-* ID generation: ULID (order_code), UUID (primary keys).
-* Auth: JWT (golang-jwt v5), HMAC OTP hashing.
-* Future Async: NATS / Kafka + worker service.
-
-### Why Go vs Python (concise comparison)
-| Aspect | Go | Python (Django/FastAPI) |
-|--------|----|-------------------------|
-| Concurrency | Built-in goroutines, lightweight | Async requires event loop; mixed sync/async complexity |
-| Performance | Generally higher throughput | Adequate; can require scaling sooner |
-| Binary deploy | Single static-ish binary | Requires runtime & virtualenv |
-| Ecosystem (admin UI) | Less batteries-included | Django provides rich admin out of box |
-| Learning curve | Simpler language surface | Rich dynamic features, more patterns |
-Decision: Go chosen for performance, concurrency, and team preference; admin UI can be built via React Web.
-
-## 8. Security & Compliance (MVP)
-* Hash OTPs; never store plain text.
-* Rate limit high-risk endpoints.
-* Enforce HTTPS + secure headers.
-* RBAC checks for provider actions.
-* Data minimization & deletion endpoints for user privacy.
-
-## 9. Scalability Path
-* Step 1: Modular monolith (current).
-* Step 2: Extract Chat + Search when latency or team ownership requires.
-* Step 3: Introduce event bus & dedicated notification service.
-* Step 4: Add read replicas / further partitioning (weekly) for high order volume.
-
-## 10. Roadmap (Indicative)
-1. Auth & OTP + provider onboarding.
-2. Menus/items CRUD + geo search.
-3. Cart + order & order_code generation + confirmation.
-4. Chat WebSocket MVP.
-5. Observability & partition maintenance automation.
-6. Hardening: rate limits, verification workflow, image variants.
-7. Service extraction (as needed).
-## 11. Running the Application
-
-### Quick Start (One Command!)
+### One-Command Start
 
 ```powershell
-# Start everything in Docker (recommended for first-time setup)
+# Windows
 .\run.ps1
 
-# Or for local development with hot-reload
+# Or with local hot-reload
 .\run.ps1 -Mode local
 ```
 
-### Prerequisites
+### Manual Setup
 
-- **Docker Desktop** - Required for all modes
-- **Go 1.20+** - Required for local mode
-- **Node.js 20+** - Required for local mode
+1. **Clone & Configure**
+```bash
+git clone <repo>
+cd GetMeJainFood
+cp .env.example .env
+# Edit .env with your configuration
+```
+
+2. **Start Services**
+```powershell
+# Docker mode (all services in containers)
+.\run.ps1
+
+# Local mode (infra in Docker, app runs natively)
+.\run.ps1 -Mode local
+```
+
+3. **Access the App**
+- Frontend: http://localhost:3000 (Docker) or http://localhost:5173 (Local)
+- API: http://localhost:8080
+- API Health: http://localhost:8080/health
+- MinIO Console: http://localhost:9001
 
 ### Available Commands
 
 ```powershell
-# Development (default)
-.\run.ps1                              # Start dev in Docker
-.\run.ps1 -Mode local                  # Start dev with hot-reload
+.\run.ps1                              # Start dev environment
+.\run.ps1 -Mode local                  # Start with hot-reload
 .\run.ps1 -Action down                 # Stop all services
 .\run.ps1 -Action logs                 # View logs
 .\run.ps1 -Action status               # Check service status
-.\run.ps1 -Action restart              # Restart all services
-
-# QA Environment
+.\run.ps1 -Action restart              # Restart services
 .\run.ps1 -Environment qa              # Start QA environment
-.\run.ps1 -Environment qa -Action down # Stop QA
-
-# Production Environment
 .\run.ps1 -Environment prod            # Start production
 ```
 
-### Environment Modes
+## 🌐 API Endpoints
 
-| Mode | Description | Best For |
-|------|-------------|----------|
-| `docker` (default) | All services run in containers | Testing, CI/CD, production-like testing |
-| `local` | Only infra in Docker, Go/React run natively | Development with hot-reload |
-
-### Access Points
-
-| Service | URL | Notes |
-|---------|-----|-------|
-| Frontend | http://localhost:3000 (docker) / http://localhost:5173 (local) | React app |
-| API | http://localhost:8080 | Go backend |
-| API Health | http://localhost:8080/health | Health check endpoint |
-| MinIO Console | http://localhost:9001 | Object storage admin (credentials in .env) |
-### Configuration
-
-First, create your environment file:
-```bash
-cp .env.example .env
-# Edit .env with your configuration values
+### Authentication
+```
+POST /v1/auth/send-otp     - Send OTP to phone
+POST /v1/auth/verify-otp   - Verify OTP & get JWT
 ```
 
-Environment variables:
-- `POSTGRES_PASSWORD` - Database password (required)
-- `JWT_SECRET` - JWT signing key (required)
-- `OTP_SECRET` - OTP signing key (required)
-- `S3_ACCESS_KEY` / `S3_SECRET_KEY` - MinIO credentials
-### Architecture (Services)
+### Users
+```
+GET  /v1/users/me          - Get current user profile
+PUT  /v1/users/me          - Update profile
+DELETE /v1/users/me        - Delete account (GDPR)
+GET  /v1/users             - List users (admin)
+POST /v1/users/:id/block   - Block user (admin)
+POST /v1/users/:id/unblock - Unblock user (admin)
+```
+
+### Providers
+```
+GET  /v1/providers         - List providers
+GET  /v1/providers/:id     - Get provider details
+POST /v1/providers         - Create provider profile
+PUT  /v1/providers/:id     - Update provider
+POST /v1/providers/:id/verify - Verify provider (admin)
+POST /v1/providers/:id/block  - Block provider (admin)
+```
+
+### Menus & Items
+```
+GET  /v1/menus/:id                    - Get menu
+GET  /v1/menus/provider/:provider_id  - Get provider menus
+POST /v1/menus                        - Create menu
+PUT  /v1/menus/:id                    - Update menu
+GET  /v1/menu-items/:id               - Get item
+GET  /v1/menu-items/menu/:menu_id     - Get menu items
+POST /v1/menu-items                   - Create item
+PUT  /v1/menu-items/:id               - Update item
+PATCH /v1/menu-items/:id/availability - Toggle availability
+```
+
+### Search
+```
+GET /v1/search/providers   - Search nearby providers
+GET /v1/search/items       - Search menu items
+```
+
+### Orders
+```
+POST /v1/orders              - Create order
+GET  /v1/orders/:id          - Get order
+GET  /v1/orders/code/:code   - Get order by code
+POST /v1/orders/:id/confirm-otp - Confirm with OTP
+POST /v1/orders/:id/cancel   - Cancel order
+POST /v1/orders/:id/complete - Mark complete
+```
+
+### Reviews
+```
+GET  /v1/reviews/provider/:id       - Get provider reviews
+GET  /v1/reviews/provider/:id/stats - Get review statistics
+POST /v1/reviews                    - Create review
+GET  /v1/reviews/my                 - Get my reviews
+DELETE /v1/reviews/:id              - Delete my review
+DELETE /v1/reviews/:id/admin        - Delete review (admin)
+```
+
+### Media
+```
+POST /v1/media/upload-url   - Get presigned upload URL
+POST /v1/media/download-url - Get presigned download URL
+```
+
+### Chat (WebSocket)
+```
+GET  /v1/chat/ws                    - WebSocket connection
+POST /v1/chat                       - Create chat room
+GET  /v1/chat/order/:order_id       - Get chat by order
+GET  /v1/chat/:id/messages          - Get messages
+```
+
+## 🌍 Multi-Language Support
+
+The app supports English and Hindi. Switch languages using the globe icon (🌐) in the header.
+
+### Supported Languages
+- **English (EN)** - Default
+- **Hindi (हिन्दी)** - Full translation support
+
+### Adding Translations
+
+Edit `web/src/store/languageStore.ts`:
+
+```typescript
+const translations: Record<Language, Record<string, string>> = {
+  en: {
+    'key.name': 'English text',
+    // ...
+  },
+  hi: {
+    'key.name': 'हिन्दी टेक्स्ट',
+    // ...
+  },
+}
+```
+
+Use in components:
+```typescript
+const { t, language } = useLanguageStore()
+// t('key.name') returns translated text
+// language === 'en' | 'hi'
+```
+
+## 📊 Database Schema
+
+### Key Tables
+- `users` - User accounts with roles (buyer, provider, admin)
+- `providers` - Provider profiles with geo location
+- `menus` - Provider menus
+- `menu_items` - Individual menu items
+- `orders` - Order records (partitioned by month)
+- `reviews` - Provider reviews
+- `chats` / `messages` - Chat rooms and messages
+- `events` - Audit log for analytics
+
+### Migrations
+Located in `migrations/` folder, applied automatically on first container start.
+
+## 🔒 Security
+
+- **OTP Hashing** - OTPs are HMAC-SHA256 hashed before storage
+- **JWT Auth** - Short-lived access tokens
+- **Rate Limiting** - On OTP and auth endpoints
+- **HTTPS** - Enforced in production
+- **RBAC** - Role-based access control
+- **CORS** - Configured for allowed origins
+
+## 🐳 Docker Services
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -231,40 +300,69 @@ Environment variables:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Troubleshooting
+## 🔧 Configuration
 
-**Docker not running:**
-```
-ERROR: Docker is not running. Please start Docker Desktop first.
-```
-→ Start Docker Desktop and wait for it to be ready.
+### Environment Variables
 
-**Port already in use:**
-```powershell
-# Check what's using the port
-netstat -ano | findstr :8080
-# Kill the process or change PORT in .env file
-```
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | API server port | 8080 |
+| `DATABASE_URL` | PostgreSQL connection string | - |
+| `REDIS_ADDR` | Redis address | localhost:6379 |
+| `JWT_SECRET` | JWT signing key | - |
+| `OTP_SECRET` | OTP HMAC key | - |
+| `S3_ENDPOINT` | Object storage endpoint | - |
+| `S3_ACCESS_KEY` | S3 access key | - |
+| `S3_SECRET_KEY` | S3 secret key | - |
+| `S3_BUCKET` | S3 bucket name | jain-food-media |
 
-**Database connection failed:**
-```powershell
-# Check if postgres is healthy
-docker compose -f docker/docker-compose.yml ps
-# View postgres logs
-docker compose -f docker/docker-compose.yml logs postgres
-```
+## 🧪 Development
 
-**Clean restart:**
-```powershell
-.\run.ps1 -Action down
-docker volume prune -f  # Warning: removes all unused volumes
-.\run.ps1
+### Running Tests
+```bash
+# Backend tests
+go test ./...
+
+# Frontend type check
+cd web && npm run build
 ```
 
-## 12. Next Steps
-* Add migration `0002_order_code.up.sql`.
-* Implement `GenerateOrderCode()` and update order creation.
-* Expose GET /orders/:code endpoint.
+### Mock Mode
+Set `VITE_USE_MOCK_API=true` in web/.env to use mock data without backend.
+
+### Hot Reload
+Use `.\run.ps1 -Mode local` for hot-reload development:
+- Backend: Air for Go hot-reload
+- Frontend: Vite dev server
+
+## 📝 Roadmap
+
+- [x] Auth & OTP system
+- [x] Provider onboarding
+- [x] Menu management
+- [x] Geo-based search
+- [x] Cart & orders
+- [x] Reviews system
+- [x] Admin dashboard
+- [x] Multi-language support (English & Hindi)
+- [ ] Push notifications
+- [ ] Payment integration
+- [ ] Delivery tracking
+- [ ] Mobile app (React Native)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests
+5. Submit a pull request
+
+## 📄 License
+
+MIT License - see LICENSE file for details.
 
 ---
-Feel free to request scaffolding for handlers, routing, or an OpenAPI spec.
+
+Built with ❤️ for the Jain community
+
