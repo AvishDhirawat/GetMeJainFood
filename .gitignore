@@ -1,31 +1,41 @@
-# Environment files (contain secrets)
+﻿# ======================================
+# SECRETS - NEVER COMMIT THESE!
+# ======================================
 .env
-.env.local
-.env.*.local
-
-# Coverage output
-coverage.out
-
-# Build outputs
-bin/
-dist/
-
+.env.*
+!.env.example
+.secrets
+.secrets.*
+secrets.json
+secrets.yaml
+*.local
+# Config files with secrets
+configs/.env.*
+!configs/.env.example
+# ======================================
 # IDE
+# ======================================
 .idea/
 .vscode/
 *.swp
 *.swo
-
+# ======================================
 # OS
+# ======================================
 .DS_Store
 Thumbs.db
-
+# ======================================
 # Node
+# ======================================
 node_modules/
 web/node_modules/
 web/dist/
-
+web/.env
+web/.env.*
+!web/.env.example
+# ======================================
 # Go
+# ======================================
 *.exe
 *.exe~
 *.dll
@@ -33,4 +43,17 @@ web/dist/
 *.dylib
 *.test
 *.out
-
+bin/
+# ======================================
+# Coverage & Logs
+# ======================================
+coverage.out
+coverage.html
+*.log
+logs/
+# ======================================
+# Temporary files
+# ======================================
+tmp/
+temp/
+*.tmp

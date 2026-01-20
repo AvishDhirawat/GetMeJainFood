@@ -12,7 +12,7 @@ services:
       - ../.env
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env file}
       POSTGRES_DB: ${POSTGRES_DB:-jain_food}
     volumes:
       - pgdata-dev:/var/lib/postgresql/data
@@ -46,8 +46,8 @@ services:
     env_file:
       - ../.env
     environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set in .env file}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set in .env file}
     # Expose both ports for local access
     ports:
       - "9000:9000"
@@ -69,12 +69,12 @@ services:
       PORT: 8080
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-jain_food}?sslmode=disable
       REDIS_ADDR: redis:6379
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
-      OTP_SECRET: ${OTP_SECRET:?OTP_SECRET is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env file}
+      OTP_SECRET: ${OTP_SECRET:?OTP_SECRET must be set in .env file}
       S3_ENDPOINT: http://minio:9000
       S3_REGION: ${S3_REGION:-us-east-1}
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
-      S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY is required}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set in .env file}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set in .env file}
       S3_BUCKET: ${S3_BUCKET:-jain-food-media}
       GIN_MODE: debug
     ports:

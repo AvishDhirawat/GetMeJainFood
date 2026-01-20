@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { XMarkIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import { useLanguageStore } from '../store/languageStore'
@@ -7,12 +7,14 @@ interface TermsModalProps {
   isOpen: boolean
   onAccept: () => void
   onClose: () => void
+  userType?: 'buyer' | 'provider'
 }
 
-const TERMS_CONTENT = {
+// Provider-specific terms
+const PROVIDER_TERMS_CONTENT = {
   en: `परस्परोपग्रहो जीवानाम्
 
-Jain Food in Bharat
+Jain Food in Bharat - PROVIDER TERMS & CONDITIONS
 
 "BY JAINS FOR JAINS"
 
@@ -32,11 +34,17 @@ C) For sweets/dessert providers, don't use the words such as pure jain or jain f
 
 D) If you are supplying non Jain veg food items also then please don't mention in the app but please mention to the customers specifically that you prepare those items though you not mentioned in the app.
 
+E) Providers are responsible for maintaining food quality and hygiene standards.
+
+F) Providers must respond to customer inquiries and orders in a timely manner.
+
+G) Any violation of these terms may result in account suspension or termination.
+
 Jai Jinendra`,
 
   hi: `परस्परोपग्रहो जीवानाम्
 
-भारत में जैन भोजन
+भारत में जैन भोजन - प्रदाता नियम और शर्तें
 
 "जैनों द्वारा जैनों के लिए"
 
@@ -56,18 +64,125 @@ Jai Jinendra`,
 
 घ) यदि आप गैर-जैन शाकाहारी भोजन आइटम भी आपूर्ति कर रहे हैं तो कृपया ऐप में उल्लेख न करें लेकिन कृपया ग्राहकों को विशेष रूप से बताएं कि आप उन आइटम्स को तैयार करते हैं हालांकि आपने ऐप में उल्लेख नहीं किया है।
 
+ङ) प्रदाता खाद्य गुणवत्ता और स्वच्छता मानकों को बनाए रखने के लिए जिम्मेदार हैं।
+
+च) प्रदाताओं को ग्राहक पूछताछ और ऑर्डर का समय पर जवाब देना चाहिए।
+
+छ) इन शर्तों का कोई भी उल्लंघन खाता निलंबन या समाप्ति में परिणामित हो सकता है।
+
 जय जिनेंद्र`
 }
 
-export default function TermsModal({ isOpen, onAccept, onClose }: TermsModalProps) {
+// User/Buyer-specific terms
+const USER_TERMS_CONTENT = {
+  en: `परस्परोपग्रहो जीवानाम्
+
+Jain Food in Bharat - USER TERMS & CONDITIONS
+
+"BY JAINS FOR JAINS"
+
+Welcome to our Jain Food community! 🙏
+
+By registering as a user, you agree to the following terms:
+
+1. COMMUNITY GUIDELINES
+   - This platform is dedicated to connecting Jains with authentic Jain food providers
+   - Please be respectful to providers and other community members
+   - Report any non-Jain food items or inappropriate content
+
+2. USER RESPONSIBILITIES
+   - Provide accurate contact information for order delivery
+   - Make timely payments for orders placed
+   - Cancel orders only when necessary and with proper notice
+   - Leave honest and fair reviews based on your experience
+
+3. JAIN FOOD PRINCIPLES
+   - Food listed on this platform should exclude all root vegetables (onion, garlic, potato, ginger, carrot, radish, etc.)
+   - Pure Jain food adheres to the principles of Ahimsa (non-violence)
+   - If you find any provider violating these principles, please report them
+
+4. PRIVACY & DATA
+   - Your phone number is used for account verification and order communication
+   - We respect your privacy and do not share your data with third parties
+   - You can request deletion of your account at any time
+
+5. DISCLAIMER
+   - We facilitate connections between users and providers
+   - Quality of food and service is the responsibility of individual providers
+   - We are not liable for any disputes between users and providers
+
+By accepting these terms, you become part of a community that supports Jain food culture and local Jain businesses.
+
+Jai Jinendra 🙏`,
+
+  hi: `परस्परोपग्रहो जीवानाम्
+
+भारत में जैन भोजन - उपयोगकर्ता नियम और शर्तें
+
+"जैनों द्वारा जैनों के लिए"
+
+हमारे जैन भोजन समुदाय में आपका स्वागत है! 🙏
+
+उपयोगकर्ता के रूप में पंजीकरण करके, आप निम्नलिखित शर्तों से सहमत हैं:
+
+1. समुदाय दिशानिर्देश
+   - यह प्लेटफॉर्म जैनों को प्रामाणिक जैन भोजन प्रदाताओं से जोड़ने के लिए समर्पित है
+   - कृपया प्रदाताओं और अन्य समुदाय के सदस्यों के प्रति सम्मान रखें
+   - किसी भी गैर-जैन भोजन आइटम या अनुचित सामग्री की रिपोर्ट करें
+
+2. उपयोगकर्ता की जिम्मेदारियां
+   - ऑर्डर डिलीवरी के लिए सही संपर्क जानकारी प्रदान करें
+   - दिए गए ऑर्डर के लिए समय पर भुगतान करें
+   - केवल आवश्यक होने पर और उचित सूचना के साथ ऑर्डर रद्द करें
+   - अपने अनुभव के आधार पर ईमानदार और निष्पक्ष समीक्षा दें
+
+3. जैन भोजन सिद्धांत
+   - इस प्लेटफॉर्म पर सूचीबद्ध भोजन में सभी कंद-मूल (प्याज, लहसुन, आलू, अदरक, गाजर, मूली, आदि) शामिल नहीं होने चाहिए
+   - शुद्ध जैन भोजन अहिंसा के सिद्धांतों का पालन करता है
+   - यदि आप किसी प्रदाता को इन सिद्धांतों का उल्लंघन करते पाते हैं, तो कृपया उनकी रिपोर्ट करें
+
+4. गोपनीयता और डेटा
+   - आपका फोन नंबर खाता सत्यापन और ऑर्डर संचार के लिए उपयोग किया जाता है
+   - हम आपकी गोपनीयता का सम्मान करते हैं और आपका डेटा तीसरे पक्षों के साथ साझा नहीं करते
+   - आप किसी भी समय अपने खाते को हटाने का अनुरोध कर सकते हैं
+
+5. अस्वीकरण
+   - हम उपयोगकर्ताओं और प्रदाताओं के बीच कनेक्शन की सुविधा प्रदान करते हैं
+   - भोजन और सेवा की गुणवत्ता व्यक्तिगत प्रदाताओं की जिम्मेदारी है
+   - उपयोगकर्ताओं और प्रदाताओं के बीच किसी भी विवाद के लिए हम उत्तरदायी नहीं हैं
+
+इन शर्तों को स्वीकार करके, आप एक ऐसे समुदाय का हिस्सा बन जाते हैं जो जैन भोजन संस्कृति और स्थानीय जैन व्यवसायों का समर्थन करता है।
+
+जय जिनेंद्र 🙏`
+}
+
+export default function TermsModal({ isOpen, onAccept, onClose, userType = 'buyer' }: TermsModalProps) {
   const { language, t } = useLanguageStore()
   const [accepted, setAccepted] = useState(false)
   const [scrolledToBottom, setScrolledToBottom] = useState(false)
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  // Select appropriate terms based on user type
+  const termsContent = userType === 'provider' ? PROVIDER_TERMS_CONTENT : USER_TERMS_CONTENT
+  const termsTitle = userType === 'provider'
+    ? (language === 'hi' ? 'प्रदाता नियम और शर्तें' : 'Provider Terms & Conditions')
+    : (language === 'hi' ? 'उपयोगकर्ता नियम और शर्तें' : 'User Terms & Conditions')
 
   useEffect(() => {
     if (!isOpen) {
       setAccepted(false)
       setScrolledToBottom(false)
+    }
+  }, [isOpen])
+
+  // Check if content is scrollable and if already at bottom on mount
+  useEffect(() => {
+    if (isOpen && contentRef.current) {
+      const el = contentRef.current
+      // If content is not scrollable (fits in view), allow acceptance immediately
+      if (el.scrollHeight <= el.clientHeight + 10) {
+        setScrolledToBottom(true)
+      }
     }
   }, [isOpen])
 
@@ -85,64 +200,70 @@ export default function TermsModal({ isOpen, onAccept, onClose }: TermsModalProp
     }
   }
 
+  if (!isOpen) return null
+
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 z-50"
+            className="absolute inset-0 bg-black/70"
             onClick={onClose}
           />
 
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-2xl md:w-full md:max-h-[80vh] bg-white rounded-2xl shadow-2xl z-50 flex flex-col"
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="relative w-full max-w-2xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-xl font-bold text-gray-900">{t('terms.title')}</h2>
+            <div className="flex-shrink-0 flex items-center justify-between p-4 border-b bg-white">
+              <h2 className="text-xl font-bold text-gray-900">{termsTitle}</h2>
               <button
                 onClick={onClose}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Close"
               >
-                <XMarkIcon className="w-5 h-5" />
+                <XMarkIcon className="w-6 h-6" />
               </button>
             </div>
 
-            {/* Content */}
+            {/* Content - Scrollable */}
             <div
-              className="flex-1 overflow-y-auto p-6"
+              ref={contentRef}
+              className="flex-1 overflow-y-auto p-4 sm:p-6"
               onScroll={handleScroll}
+              style={{ minHeight: '200px', maxHeight: 'calc(90vh - 250px)' }}
             >
               <div className="prose prose-sm max-w-none">
-                <pre className="whitespace-pre-wrap font-sans text-gray-700 leading-relaxed">
-                  {language === 'hi' ? TERMS_CONTENT.hi : TERMS_CONTENT.en}
-                </pre>
+                <div className="whitespace-pre-wrap font-sans text-gray-700 leading-relaxed text-sm sm:text-base">
+                  {language === 'hi' ? termsContent.hi : termsContent.en}
+                </div>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="p-4 border-t bg-gray-50 rounded-b-2xl">
+            {/* Footer - Always visible */}
+            <div className="flex-shrink-0 p-4 border-t bg-gray-50">
               {!scrolledToBottom && (
-                <p className="text-sm text-amber-600 mb-3 text-center">
-                  ↓ {t('terms.readCarefully')}
+                <p className="text-sm text-amber-600 mb-3 text-center animate-bounce">
+                  ↓ {t('terms.readCarefully')} ↓
                 </p>
               )}
 
-              <label className="flex items-center gap-3 mb-4 cursor-pointer">
+              <label className="flex items-center gap-3 mb-4 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={accepted}
                   onChange={(e) => setAccepted(e.target.checked)}
                   disabled={!scrolledToBottom}
-                  className="w-5 h-5 rounded border-gray-300 text-primary-500 focus:ring-primary-500 disabled:opacity-50"
+                  className="w-5 h-5 rounded border-gray-300 text-primary-500 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className={`text-sm ${scrolledToBottom ? 'text-gray-700' : 'text-gray-400'}`}>
                   {t('terms.accept')}
@@ -152,22 +273,22 @@ export default function TermsModal({ isOpen, onAccept, onClose }: TermsModalProp
               <div className="flex gap-3">
                 <button
                   onClick={onClose}
-                  className="flex-1 py-3 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-100 transition-colors"
+                  className="flex-1 py-3 px-4 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-100 transition-colors"
                 >
                   {t('common.cancel')}
                 </button>
                 <button
                   onClick={handleAccept}
                   disabled={!accepted}
-                  className="flex-1 py-3 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 py-3 px-4 bg-primary-500 text-white rounded-xl font-semibold hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
                   <CheckCircleIcon className="w-5 h-5" />
-                  {t('common.continue')}
+                  <span>{t('common.continue')}</span>
                 </button>
               </div>
             </div>
           </motion.div>
-        </>
+        </div>
       )}
     </AnimatePresence>
   )

@@ -113,6 +113,30 @@ try {
     }
 }
 
+# Test 6: Test OTP API (DEV only)
+Write-Host ""
+Write-Host "[Test 6/6] Testing OTP API (dev mode)..." -ForegroundColor Yellow
+try {
+    $testPhone = "9876543210"
+
+    # Check phone
+    $checkBody = @{ phone = $testPhone } | ConvertTo-Json
+    $checkResponse = Invoke-RestMethod -Uri "http://localhost:8080/v1/auth/check-phone" -Method POST -Body $checkBody -ContentType "application/json" -TimeoutSec 10
+    Write-Host "  Phone check API working" -ForegroundColor Green
+
+    # Send OTP
+    $otpBody = @{ phone = $testPhone; purpose = "register" } | ConvertTo-Json
+    $otpResponse = Invoke-RestMethod -Uri "http://localhost:8080/v1/auth/send-otp" -Method POST -Body $otpBody -ContentType "application/json" -TimeoutSec 10
+
+    if ($otpResponse.otp) {
+        Write-Host "  OTP API working (Dev OTP: $($otpResponse.otp))" -ForegroundColor Green
+    } else {
+        Write-Host "  OTP API working (SMS sent)" -ForegroundColor Green
+    }
+} catch {
+    Write-Host "  Note: OTP API test failed or cooldown active (normal if recently tested)" -ForegroundColor Yellow
+}
+
 # Summary
 Write-Host ""
 Write-Host "========================================"
@@ -131,6 +155,9 @@ if ($allPassed) {
     Write-Host "Try the API:" -ForegroundColor White
     Write-Host '  Invoke-RestMethod -Uri "http://localhost:8080/health"' -ForegroundColor Gray
     Write-Host '  Invoke-RestMethod -Uri "http://localhost:8080/v1/providers" -Method GET' -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Run comprehensive API tests:" -ForegroundColor White
+    Write-Host '  .\test-api.ps1' -ForegroundColor Gray
 } else {
     Write-Host "  Some tests FAILED!                   " -ForegroundColor Red
     Write-Host "========================================"

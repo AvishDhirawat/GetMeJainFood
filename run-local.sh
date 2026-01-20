@@ -3,21 +3,34 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/.env"
+ENV_EXAMPLE_FILE="$SCRIPT_DIR/.env.example"
 
 echo "========================================"
 echo "  GetMeJainFood - Local Development    "
 echo "========================================"
 echo ""
 
-# Check if .env file exists
+# Check if .env file exists, create from example if not
 if [ ! -f "$ENV_FILE" ]; then
-    echo "ERROR: .env file not found!"
-    echo ""
-    echo "Please create a .env file from the example:"
-    echo "  cp .env.example .env"
-    echo ""
-    echo "Then edit .env with your configuration values."
-    exit 1
+    echo "WARNING: .env file not found!"
+
+    if [ -f "$ENV_EXAMPLE_FILE" ]; then
+        echo "Creating .env from .env.example with default values..."
+        cp "$ENV_EXAMPLE_FILE" "$ENV_FILE"
+        echo ".env file created! You can customize it later."
+    else
+        echo "ERROR: Neither .env nor .env.example found!"
+        echo ""
+        echo "Please create a .env file with required configuration:"
+        echo "  POSTGRES_USER=postgres"
+        echo "  POSTGRES_PASSWORD=<your_secure_password>"
+        echo "  POSTGRES_DB=jain_food"
+        echo "  DATABASE_URL=postgres://postgres:<your_secure_password>@localhost:5432/jain_food?sslmode=disable"
+        echo "  REDIS_ADDR=localhost:6379"
+        echo "  JWT_SECRET=<generate_random_32_char_string>"
+        echo "  OTP_SECRET=<generate_random_32_char_string>"
+        exit 1
+    fi
 fi
 
 # Check if Docker is running

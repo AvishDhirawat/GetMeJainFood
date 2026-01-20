@@ -13,6 +13,7 @@ require (
 	github.com/gorilla/websocket v1.5.1
 	github.com/jackc/pgx/v5 v5.5.4
 	github.com/joho/godotenv v1.5.1
+	github.com/lib/pq v1.10.9
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/redis/go-redis/v9 v9.4.0
 	go.uber.org/zap v1.26.0

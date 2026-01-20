@@ -164,3 +164,35 @@ func GetOrdersByProvider(ctx context.Context, providerID string, limit, offset i
 	}
 	return orders, nil
 }
+
+// UpdatePaymentStatus updates the payment status and payment ID for an order.
+func UpdatePaymentStatus(ctx context.Context, orderID string, paymentStatus string, paymentID string) error {
+	ct, err := db.Pool.Exec(ctx, `
+		UPDATE orders
+		SET payment_status = $1, payment_id = $2, updated_at = $3
+		WHERE id = $4
+	`, paymentStatus, paymentID, time.Now(), orderID)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("order not found")
+	}
+	return nil
+}
+
+// UpdateStatus updates the order status.
+func UpdateStatus(ctx context.Context, orderID string, status string) error {
+	ct, err := db.Pool.Exec(ctx, `
+		UPDATE orders
+		SET status = $1, updated_at = $2
+		WHERE id = $3
+	`, status, time.Now(), orderID)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("order not found")
+	}
+	return nil
+}

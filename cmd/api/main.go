@@ -21,7 +21,9 @@ import (
 	"jainfood/internal/menus"
 	"jainfood/internal/middleware"
 	"jainfood/internal/monitoring"
+	"jainfood/internal/notify"
 	"jainfood/internal/orders"
+	"jainfood/internal/payment"
 	"jainfood/internal/providers"
 	"jainfood/internal/redisclient"
 	"jainfood/internal/reviews"
@@ -53,7 +55,14 @@ func main() {
 	defer db.Close()
 
 	// Connect to Redis
-	redisclient.Connect(cfg.RedisAddr)
+	// Support both REDIS_URL (for cloud) and REDIS_ADDR (for local)
+	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
+		if err := redisclient.ConnectWithURL(redisURL); err != nil {
+			logger.Fatal("redis connect failed", zap.Error(err))
+		}
+	} else {
+		redisclient.Connect(cfg.RedisAddr)
+	}
 
 	// Initialize media client (optional - for object storage)
 	var mediaClient *media.Client
@@ -69,6 +78,18 @@ func main() {
 		if err != nil {
 			logger.Warn("media client init failed", zap.Error(err))
 		}
+	}
+
+	// Initialize payment service (optional - for Razorpay)
+	var paymentService payment.PaymentService
+	razorpayKeyID := os.Getenv("RAZORPAY_KEY_ID")
+	razorpayKeySecret := os.Getenv("RAZORPAY_KEY_SECRET")
+	if razorpayKeyID != "" && razorpayKeySecret != "" {
+		paymentService = payment.NewRazorpayService(razorpayKeyID, razorpayKeySecret)
+		logger.Info("payment service initialized", zap.String("provider", "razorpay"))
+	} else {
+		paymentService = payment.NewMockPaymentService()
+		logger.Info("payment service initialized", zap.String("provider", "mock"))
 	}
 
 	// Initialize chat hub
@@ -119,8 +140,8 @@ func main() {
 			// Rate limit OTP endpoints
 			authGroup.Use(middleware.EndpointRateLimiter(5, time.Minute))
 
-			// Send OTP
-			authGroup.POST("/send-otp", func(c *gin.Context) {
+			// Check if phone number exists (for registration flow)
+			authGroup.POST("/check-phone", func(c *gin.Context) {
 				var body struct {
 					Phone string `json:"phone" binding:"required"`
 				}
@@ -129,9 +150,60 @@ func main() {
 					return
 				}
 
+				exists, err := users.CheckPhoneExists(ctx, body.Phone)
+				if err != nil {
+					logger.Error("phone check failed", zap.Error(err))
+					c.JSON(500, gin.H{"error": "failed to check phone"})
+					return
+				}
+
+				c.JSON(200, gin.H{
+					"exists":     exists,
+					"can_login":  exists,
+					"can_register": !exists,
+				})
+			})
+
+			// Send OTP (for both login and registration)
+			authGroup.POST("/send-otp", func(c *gin.Context) {
+				var body struct {
+					Phone    string `json:"phone" binding:"required"`
+					Purpose  string `json:"purpose"` // "login" or "register"
+				}
+				if err := c.ShouldBindJSON(&body); err != nil {
+					logger.Error("send-otp: invalid request body", zap.Error(err))
+					c.JSON(400, gin.H{"error": err.Error()})
+					return
+				}
+
+				logger.Info("send-otp: request received",
+					zap.String("phone", body.Phone[:4]+"******"),
+					zap.String("purpose", body.Purpose),
+					zap.String("env", string(cfg.Env)))
+
+				// Check if phone exists for login/register validation
+				exists, err := users.CheckPhoneExists(ctx, body.Phone)
+				if err != nil {
+					logger.Error("send-otp: phone check failed", zap.Error(err))
+					c.JSON(500, gin.H{"error": "failed to check phone"})
+					return
+				}
+
+				// Validate purpose
+				if body.Purpose == "login" && !exists {
+					logger.Warn("send-otp: phone not registered for login", zap.String("phone", body.Phone[:4]+"******"))
+					c.JSON(400, gin.H{"error": "phone_not_registered", "message": "This phone number is not registered. Please sign up first."})
+					return
+				}
+				if body.Purpose == "register" && exists {
+					logger.Warn("send-otp: phone already registered", zap.String("phone", body.Phone[:4]+"******"))
+					c.JSON(400, gin.H{"error": "phone_already_registered", "message": "This phone number is already registered. Please login instead."})
+					return
+				}
+
 				otp, err := auth.GenerateOTP()
 				if err != nil {
-					logger.Error("otp generation failed", zap.Error(err))
+					logger.Error("send-otp: otp generation failed", zap.Error(err))
 					c.JSON(500, gin.H{"error": "otp generation failed"})
 					return
 				}
@@ -139,17 +211,201 @@ func main() {
 				hash := auth.HashOTP(cfg.OtpSecret, otp)
 				key := "otp:" + body.Phone
 				if err := auth.StoreOTP(ctx, key, hash, 10*time.Minute); err != nil {
-					logger.Error("redis set failed", zap.Error(err))
+					logger.Error("send-otp: redis set failed", zap.Error(err))
 					c.JSON(500, gin.H{"error": "failed to store otp"})
 					return
 				}
 
-				// TODO: Integrate SMS gateway for production
-				// For development, return OTP in response (REMOVE in production)
-				c.JSON(200, gin.H{"message": "otp_sent", "otp": otp})
+				// Send OTP via SMS based on environment configuration
+				smsSent := false
+				smsError := ""
+				if cfg.ShouldSendSMS() {
+					notifier := notify.NewNotifier()
+					if err := notifier.SendOTP(body.Phone, otp); err != nil {
+						logger.Warn("send-otp: SMS sending failed",
+							zap.Error(err),
+							zap.String("service", cfg.NotifyService))
+						smsError = err.Error()
+					} else {
+						smsSent = true
+						logger.Info("send-otp: SMS sent successfully",
+							zap.String("phone", body.Phone[:4]+"******"),
+							zap.String("service", cfg.NotifyService))
+					}
+				} else {
+					logger.Info("send-otp: SMS sending skipped (disabled for this environment)",
+						zap.String("env", string(cfg.Env)))
+				}
+
+				// Build response
+				response := gin.H{
+					"message":    "otp_sent",
+					"expires_in": 600, // 10 minutes
+					"cooldown":   30,  // 30 seconds before next OTP
+				}
+
+				// Include OTP in response for local/dev environments
+				if cfg.ShouldReturnOTPInResponse() {
+					response["otp"] = otp
+					response["dev_mode"] = true
+					logger.Info("send-otp: OTP included in response (dev mode)",
+						zap.String("otp", otp))
+				}
+
+				// Include SMS status in dev mode for debugging
+				if cfg.IsDevelopment() {
+					response["sms_sent"] = smsSent
+					if smsError != "" {
+						response["sms_error"] = smsError
+					}
+				}
+
+				c.JSON(200, response)
 			})
 
-			// Verify OTP and issue JWT
+			// Register new user
+			authGroup.POST("/register", func(c *gin.Context) {
+				var body struct {
+					Phone string `json:"phone" binding:"required"`
+					OTP   string `json:"otp" binding:"required"`
+					Name  string `json:"name" binding:"required"`
+					Email string `json:"email"`
+					Role  string `json:"role"` // "buyer" or "provider"
+				}
+				if err := c.ShouldBindJSON(&body); err != nil {
+					c.JSON(400, gin.H{"error": err.Error()})
+					return
+				}
+
+				// Verify OTP first
+				key := "otp:" + body.Phone
+				stored, err := auth.GetOTP(ctx, key)
+				if err != nil {
+					c.JSON(400, gin.H{"error": "otp_expired", "message": "OTP expired or not found. Please request a new one."})
+					return
+				}
+
+				if stored != auth.HashOTP(cfg.OtpSecret, body.OTP) {
+					c.JSON(401, gin.H{"error": "invalid_otp", "message": "Invalid OTP. Please try again."})
+					return
+				}
+
+				// Delete OTP after successful verification
+				_ = auth.DeleteOTP(ctx, key)
+
+				// Set default role
+				role := body.Role
+				if role == "" {
+					role = "buyer"
+				}
+
+				// Register the user
+				user, err := users.RegisterUser(ctx, body.Phone, body.Name, body.Email, role)
+				if err != nil {
+					if err.Error() == "phone number already registered" {
+						c.JSON(400, gin.H{"error": "phone_already_registered", "message": "This phone number is already registered."})
+						return
+					}
+					logger.Error("user registration failed", zap.Error(err))
+					c.JSON(500, gin.H{"error": "registration_failed", "message": "Failed to register user."})
+					return
+				}
+
+				// Generate JWT
+				token, err := middleware.GenerateJWT(cfg.JwtSecret, user.ID, user.Phone, user.Role)
+				if err != nil {
+					logger.Error("jwt generation failed", zap.Error(err))
+					c.JSON(500, gin.H{"error": "token_generation_failed"})
+					return
+				}
+
+				// Log event
+				_ = events.LogEvent(ctx, "user", user.ID, events.EventUserCreated, map[string]interface{}{
+					"phone": user.Phone,
+					"name":  user.Name,
+					"role":  user.Role,
+				})
+
+				c.JSON(201, gin.H{
+					"message": "registration_success",
+					"token":   token,
+					"user_id": user.ID,
+					"user": gin.H{
+						"id":    user.ID,
+						"phone": user.Phone,
+						"name":  user.Name,
+						"email": user.Email,
+						"role":  user.Role,
+					},
+				})
+			})
+
+			// Login (verify OTP for existing users)
+			authGroup.POST("/login", func(c *gin.Context) {
+				var body struct {
+					Phone string `json:"phone" binding:"required"`
+					OTP   string `json:"otp" binding:"required"`
+				}
+				if err := c.ShouldBindJSON(&body); err != nil {
+					c.JSON(400, gin.H{"error": err.Error()})
+					return
+				}
+
+				// Verify OTP
+				key := "otp:" + body.Phone
+				stored, err := auth.GetOTP(ctx, key)
+				if err != nil {
+					c.JSON(400, gin.H{"error": "otp_expired", "message": "OTP expired or not found."})
+					return
+				}
+
+				if stored != auth.HashOTP(cfg.OtpSecret, body.OTP) {
+					c.JSON(401, gin.H{"error": "invalid_otp", "message": "Invalid OTP."})
+					return
+				}
+
+				_ = auth.DeleteOTP(ctx, key)
+
+				// Get user
+				user, blocked, err := users.GetUserByPhoneWithStatus(ctx, body.Phone)
+				if err != nil {
+					c.JSON(404, gin.H{"error": "user_not_found", "message": "User not found. Please register first."})
+					return
+				}
+
+				if blocked {
+					c.JSON(403, gin.H{"error": "user_blocked", "message": "Your account has been blocked. Please contact support."})
+					return
+				}
+
+				// Generate JWT
+				token, err := middleware.GenerateJWT(cfg.JwtSecret, user.ID, user.Phone, user.Role)
+				if err != nil {
+					logger.Error("jwt generation failed", zap.Error(err))
+					c.JSON(500, gin.H{"error": "token_generation_failed"})
+					return
+				}
+
+				// Log event
+				_ = events.LogEvent(ctx, "user", user.ID, "user_login", map[string]interface{}{
+					"phone": user.Phone,
+				})
+
+				c.JSON(200, gin.H{
+					"message": "login_success",
+					"token":   token,
+					"user_id": user.ID,
+					"user": gin.H{
+						"id":    user.ID,
+						"phone": user.Phone,
+						"name":  user.Name,
+						"email": user.Email,
+						"role":  user.Role,
+					},
+				})
+			})
+
+			// Legacy verify-otp endpoint (for backward compatibility)
 			authGroup.POST("/verify-otp", func(c *gin.Context) {
 				var body struct {
 					Phone string `json:"phone" binding:"required"`
@@ -709,12 +965,24 @@ func main() {
 					"order_code":  orderCode,
 				})
 
-				// TODO: Send OTP via SMS to buyer and provider
-				// For development, return OTP in response
+				// Send OTP notification for order confirmation
+				notifier := notify.NewNotifier()
+				if err := notifier.SendOTP("order:"+orderCode, otp); err != nil {
+					logger.Warn("failed to send order OTP notification", zap.Error(err))
+				}
+
+				// In development mode, return OTP in response
+				if os.Getenv("GIN_MODE") != "release" {
+					c.JSON(201, gin.H{
+						"order_id":   orderID,
+						"order_code": orderCode,
+						"otp":        otp,
+					})
+					return
+				}
 				c.JSON(201, gin.H{
 					"order_id":   orderID,
 					"order_code": orderCode,
-					"otp":        otp, // REMOVE in production
 				})
 			})
 
@@ -789,6 +1057,93 @@ func main() {
 				_ = events.LogEvent(ctx, "order", orderID, events.EventOrderCompleted, map[string]interface{}{})
 
 				c.JSON(200, gin.H{"message": "order completed"})
+			})
+		}
+
+		// ==================== PAYMENT ROUTES ====================
+		paymentGroup := v1.Group("/payments")
+		paymentGroup.Use(middleware.AuthMiddleware(cfg.JwtSecret))
+		{
+			// Create payment order (Razorpay)
+			paymentGroup.POST("/create-order", func(c *gin.Context) {
+				var body struct {
+					OrderID  string `json:"order_id" binding:"required"`
+					Amount   int64  `json:"amount" binding:"required"` // Amount in paise
+					Currency string `json:"currency"`
+				}
+				if err := c.ShouldBindJSON(&body); err != nil {
+					c.JSON(400, gin.H{"error": err.Error()})
+					return
+				}
+
+				userID, _ := middleware.GetUserIDFromContext(c)
+				receipt := "order_" + body.OrderID
+
+				paymentOrder, err := paymentService.CreateOrder(
+					body.Amount,
+					body.Currency,
+					receipt,
+					map[string]string{
+						"order_id": body.OrderID,
+						"user_id":  userID,
+					},
+				)
+				if err != nil {
+					logger.Error("payment order creation failed", zap.Error(err))
+					c.JSON(500, gin.H{"error": "failed to create payment order"})
+					return
+				}
+
+				c.JSON(200, gin.H{
+					"razorpay_order_id": paymentOrder.ID,
+					"amount":            paymentOrder.Amount,
+					"currency":          paymentOrder.Currency,
+					"key_id":            os.Getenv("RAZORPAY_KEY_ID"),
+				})
+			})
+
+			// Verify payment
+			paymentGroup.POST("/verify", func(c *gin.Context) {
+				var body struct {
+					RazorpayOrderID   string `json:"razorpay_order_id" binding:"required"`
+					RazorpayPaymentID string `json:"razorpay_payment_id" binding:"required"`
+					RazorpaySignature string `json:"razorpay_signature" binding:"required"`
+					OrderID           string `json:"order_id" binding:"required"`
+				}
+				if err := c.ShouldBindJSON(&body); err != nil {
+					c.JSON(400, gin.H{"error": err.Error()})
+					return
+				}
+
+				// Verify signature
+				if !paymentService.VerifyPayment(body.RazorpayOrderID, body.RazorpayPaymentID, body.RazorpaySignature) {
+					c.JSON(400, gin.H{"error": "payment verification failed"})
+					return
+				}
+
+				// Update order status to paid
+				if err := orders.UpdatePaymentStatus(ctx, body.OrderID, "PAID", body.RazorpayPaymentID); err != nil {
+					logger.Error("order payment update failed", zap.Error(err))
+					c.JSON(500, gin.H{"error": "failed to update order"})
+					return
+				}
+
+				_ = events.LogEvent(ctx, "payment", body.OrderID, "payment_verified", map[string]interface{}{
+					"payment_id": body.RazorpayPaymentID,
+				})
+
+				c.JSON(200, gin.H{"message": "payment verified", "payment_id": body.RazorpayPaymentID})
+			})
+
+			// Get payment details
+			paymentGroup.GET("/:payment_id", func(c *gin.Context) {
+				paymentID := c.Param("payment_id")
+				details, err := paymentService.GetPaymentDetails(paymentID)
+				if err != nil {
+					c.JSON(500, gin.H{"error": "failed to get payment details"})
+					return
+				}
+				c.JSON(200, details)
 			})
 		}
 

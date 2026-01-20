@@ -1,4 +1,4 @@
-// User types
+ // User types
 export interface User {
   id: string
   phone: string
@@ -234,7 +234,12 @@ export interface AuthResponse {
 
 export interface OtpResponse {
   message: string
-  otp?: string // Only in development
+  expires_in?: number    // OTP validity in seconds (default 600)
+  cooldown?: number      // Seconds until next OTP can be requested (default 30)
+  otp?: string           // Only returned in local/dev environments
+  dev_mode?: boolean     // True if OTP is included in response
+  sms_sent?: boolean     // Whether SMS was sent (dev mode only)
+  sms_error?: string     // SMS error message (dev mode only)
 }
 
 // Provider Categories (Jain-specific)
