@@ -130,16 +130,31 @@ func NewSMTPNotifier(host, port, username, password, fromName, toEmail string) *
 	}
 }
 
+// sanitizePhoneForEmail ensures that only expected characters are present in the
+// phone number before including it in an email body. This helps prevent any
+// unexpected control characters or injected content from untrusted input.
+func sanitizePhoneForEmail(phone string) string {
+	var b bytes.Buffer
+	for _, r := range phone {
+		// Allow digits and leading/trailing formatting characters commonly used in phone numbers.
+		if (r >= '0' && r <= '9') || r == '+' || r == '-' || r == ' ' {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
 func (s *SMTPNotifier) SendOTP(phone, otp string) error {
 	auth := smtp.PlainAuth("", s.Username, s.Password, s.Host)
 
 	subject := fmt.Sprintf("JainFood OTP: %s", otp)
+	safePhone := sanitizePhoneForEmail(phone)
 	body := fmt.Sprintf(`
 Phone: %s
 Your OTP is: %s
 
 This OTP is valid for 10 minutes.
-	`, phone, otp)
+	`, safePhone, otp)
 
 	msg := []byte(fmt.Sprintf("From: %s <%s>\r\n"+
 		"To: %s\r\n"+
