@@ -424,7 +424,7 @@ Use `.\run.ps1 -Mode local` for hot-reload development:
 
 ## 📄 License
 
-MIT License - see LICENSE file for details.
+For licensing, Contact @AvishDhirawat
 
 ---
 
