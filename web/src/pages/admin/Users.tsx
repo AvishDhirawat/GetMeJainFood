@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import {
@@ -7,7 +6,6 @@ import {
   UserIcon,
   PhoneIcon,
   EnvelopeIcon,
-  NoSymbolIcon,
   CheckCircleIcon,
   XCircleIcon,
 } from '@heroicons/react/24/outline'
@@ -199,8 +197,6 @@ function UserRow({
 }
 
 export default function AdminUsers() {
-  const { t } = useLanguageStore()
-  const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<string>('all')
 

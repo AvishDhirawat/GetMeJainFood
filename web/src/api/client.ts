@@ -662,7 +662,7 @@ export const initiateRazorpayCheckout = async (
             order_id: orderId,
           })
           onSuccess(verifyResponse.payment_id)
-        } catch (err) {
+        } catch {
           onFailure('Payment verification failed')
         }
       },
