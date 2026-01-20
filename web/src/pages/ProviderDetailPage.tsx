@@ -139,8 +139,6 @@ function MenuItemCard({
 
 // Review Card Component
 function ReviewCard({ review }: { review: Review }) {
-  const { t } = useLanguageStore()
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('en-IN', {

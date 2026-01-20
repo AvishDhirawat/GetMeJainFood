@@ -204,8 +204,7 @@ export default function TermsModal({ isOpen, onAccept, onClose, userType = 'buye
 
   return (
     <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -289,7 +288,6 @@ export default function TermsModal({ isOpen, onAccept, onClose, userType = 'buye
             </div>
           </motion.div>
         </div>
-      )}
     </AnimatePresence>
   )
 }

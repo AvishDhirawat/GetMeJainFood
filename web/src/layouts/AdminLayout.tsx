@@ -10,7 +10,6 @@ import {
 } from '@heroicons/react/24/outline'
 import { useState } from 'react'
 import { useAuthStore } from '../store/authStore'
-import { useLanguageStore } from '../store/languageStore'
 
 const navItems = [
   { to: '/admin/dashboard', icon: HomeIcon, label: 'Dashboard' },
@@ -21,7 +20,6 @@ const navItems = [
 
 export default function AdminLayout() {
   const { logout, user } = useAuthStore()
-  const { t } = useLanguageStore()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 

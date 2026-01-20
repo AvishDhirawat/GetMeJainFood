@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
   UsersIcon,
@@ -11,7 +10,6 @@ import {
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
 import { Link } from 'react-router-dom'
-import { useLanguageStore } from '../../store/languageStore'
 
 // Mock stats - replace with actual API call
 const mockStats = {
@@ -63,8 +61,6 @@ function StatCard({
 }
 
 export default function AdminDashboard() {
-  const { t } = useLanguageStore()
-
   // In production, fetch from API
   const stats = mockStats
 
