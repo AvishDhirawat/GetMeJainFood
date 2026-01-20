@@ -400,7 +400,7 @@ export default function DebugPanel({ position = 'bottom-right' }: DebugPanelProp
         action: 'Check Phone',
         status: 'success',
         message: result.exists ? 'Phone exists (can login)' : 'Phone not found (can register)',
-        data: result as Record<string, unknown>,
+        data: result as unknown as Record<string, unknown>,
       })
     } catch (error) {
       setOtpTestResult({
@@ -425,7 +425,7 @@ export default function DebugPanel({ position = 'bottom-right' }: DebugPanelProp
         action: `Send OTP (${purpose})`,
         status: 'success',
         message: result.otp ? `OTP: ${result.otp}` : 'OTP sent (check SMS)',
-        data: result as Record<string, unknown>,
+        data: result as unknown as Record<string, unknown>,
       })
     } catch (error) {
       setOtpTestResult({
@@ -458,6 +458,100 @@ export default function DebugPanel({ position = 'bottom-right' }: DebugPanelProp
         message: `Registered! User ID: ${result.user_id}`,
         data: result as unknown as Record<string, unknown>,
       })
+    } catch (error) {
+      setOtpTestResult({
+        action: 'Register',
+        status: 'error',
+        message: String(error),
+      })
+    } finally {
+      setIsTestLoading(false)
+    }
+  }
+
+  const renderOtpTesting = () => (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        <input
+          type="text"
+          value={testPhone}
+          onChange={(e) => setTestPhone(e.target.value)}
+          placeholder="Phone number"
+          className="w-full px-2 py-1 text-xs border rounded"
+        />
+        <input
+          type="text"
+          value={testOtp}
+          onChange={(e) => setTestOtp(e.target.value)}
+          placeholder="OTP"
+          className="w-full px-2 py-1 text-xs border rounded"
+        />
+        <input
+          type="text"
+          value={testName}
+          onChange={(e) => setTestName(e.target.value)}
+          placeholder="Name (for register)"
+          className="w-full px-2 py-1 text-xs border rounded"
+        />
+        <select
+          value={testRole}
+          onChange={(e) => setTestRole(e.target.value as 'buyer' | 'provider')}
+          className="w-full px-2 py-1 text-xs border rounded"
+        >
+          <option value="buyer">Buyer</option>
+          <option value="provider">Provider</option>
+        </select>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={handleTestCheckPhone}
+          disabled={isTestLoading}
+          className="px-2 py-1 text-xs bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50"
+        >
+          Check Phone
+        </button>
+        <button
+          onClick={() => handleTestSendOtp('login')}
+          disabled={isTestLoading}
+          className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50"
+        >
+          Send OTP (Login)
+        </button>
+        <button
+          onClick={() => handleTestSendOtp('register')}
+          disabled={isTestLoading}
+          className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 disabled:opacity-50"
+        >
+          Send OTP (Register)
+        </button>
+        <button
+          onClick={handleTestRegister}
+          disabled={isTestLoading}
+          className="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 disabled:opacity-50"
+        >
+          Register
+        </button>
+      </div>
+
+      {otpTestResult && (
+        <div className={`p-2 rounded text-xs ${
+          otpTestResult.status === 'success' ? 'bg-green-50 text-green-800' :
+          otpTestResult.status === 'error' ? 'bg-red-50 text-red-800' :
+          'bg-yellow-50 text-yellow-800'
+        }`}>
+          <div className="font-semibold">{otpTestResult.action}</div>
+          <div>{otpTestResult.message}</div>
+          {otpTestResult.data && (
+            <pre className="mt-1 overflow-auto max-h-20">
+              {JSON.stringify(otpTestResult.data, null, 2)}
+            </pre>
+          )}
+        </div>
+      )}
+    </div>
+  )
+
   return (
     <div className={`fixed ${positionClasses[position]} z-50`}>
       {/* Toggle Button */}

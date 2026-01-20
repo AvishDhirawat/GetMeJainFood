@@ -215,6 +215,11 @@ export default function RegisterPage() {
             to="/"
             className="inline-flex items-center gap-2 px-4 py-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
           >
+            <HomeIcon className="w-5 h-5" />
+            <span className="font-medium">{language === 'hi' ? 'होम पर जाएं' : 'Go to Home'}</span>
+          </Link>
+        </div>
+
         {/* Logo */}
         <div className="text-center mb-6">
           <div className="flex justify-center mb-4">

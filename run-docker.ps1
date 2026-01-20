@@ -72,7 +72,7 @@ Write-Host "  API:       http://localhost:8080/health" -ForegroundColor White
 Write-Host "  MinIO:     http://localhost:9001 (credentials in .env)" -ForegroundColor White
 Write-Host ""
 Write-Host "Commands:" -ForegroundColor Yellow
-Write-Host "  View logs:  cd docker && docker compose --env-file ../.env logs -f" -ForegroundColor White
-Write-Host "  Stop:       cd docker && docker compose --env-file ../.env down" -ForegroundColor White
-Write-Host "  Rebuild:    cd docker && docker compose --env-file ../.env up --build -d" -ForegroundColor White
+Write-Host "  View logs:  cd docker && docker compose --env-file `$envFile logs -f" -ForegroundColor White
+Write-Host "  Stop:       cd docker && docker compose --env-file `$envFile down" -ForegroundColor White
+Write-Host "  Rebuild:    cd docker && docker compose --env-file `$envFile up --build -d" -ForegroundColor White
 Write-Host ""

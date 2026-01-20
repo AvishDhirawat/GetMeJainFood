@@ -95,7 +95,7 @@ Write-Host ""
 Write-Host "Your .env file is ready. To start development:" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  # Start MinIO" -ForegroundColor White
-Write-Host "  docker compose -f docker/docker-compose.neon.yml up -d" -ForegroundColor Cyan
+Write-Host "  docker compose --env-file .env -f docker/docker-compose.neon.yml up -d" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  # Run backend" -ForegroundColor White
 Write-Host "  go run ./cmd/api" -ForegroundColor Cyan

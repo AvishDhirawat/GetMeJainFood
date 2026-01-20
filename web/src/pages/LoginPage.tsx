@@ -61,7 +61,7 @@ export default function LoginPage() {
 
       if (!checkResponse.exists) {
         // Redirect to register page with pre-filled phone number
-        toast.info(language === 'hi'
+        toast(language === 'hi'
           ? 'यह नंबर पंजीकृत नहीं है। कृपया पहले साइन अप करें।'
           : 'This number is not registered. Redirecting to registration...')
         navigate('/register', { state: { phone, from } })

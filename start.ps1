@@ -67,7 +67,7 @@ switch ($Action) {
     }
     "logs" {
         Push-Location "$ProjectRoot\docker"
-        docker compose logs -f
+        docker compose --env-file "$ProjectRoot\.env" logs -f
         Pop-Location
         exit 0
     }

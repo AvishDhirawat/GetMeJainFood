@@ -10,18 +10,20 @@ Write-Host "  GetMeJainFood - Docker Development   " -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
+# Define env file paths first
+$envFile = Join-Path $PSScriptRoot ".env"
+$envExampleFile = Join-Path $PSScriptRoot ".env.example"
+
 Set-Location -Path $PSScriptRoot\docker
 
 if ($Down) {
     Write-Host "Stopping all services..." -ForegroundColor Yellow
-    docker compose --env-file ../.env down
+    docker compose --env-file $envFile down
     Write-Host "All services stopped!" -ForegroundColor Green
     exit 0
 }
 
 # Check if .env file exists, create from example if not
-$envFile = Join-Path $PSScriptRoot ".env"
-$envExampleFile = Join-Path $PSScriptRoot ".env.example"
 
 if (-not (Test-Path $envFile)) {
     Write-Host "WARNING: .env file not found!" -ForegroundColor Yellow
@@ -91,8 +93,8 @@ Write-Host "  API Health:  http://localhost:8080/health" -ForegroundColor White
 Write-Host "  MinIO:       http://localhost:9001 (credentials in .env)" -ForegroundColor White
 Write-Host ""
 Write-Host "Useful commands:" -ForegroundColor Cyan
-Write-Host "  View logs:     cd docker; docker compose --env-file ../.env logs -f" -ForegroundColor White
-Write-Host "  View API logs: cd docker; docker compose --env-file ../.env logs -f api" -ForegroundColor White
+Write-Host "  View logs:     cd docker; docker compose --env-file `$envFile logs -f" -ForegroundColor White
+Write-Host "  View API logs: cd docker; docker compose --env-file `$envFile logs -f api" -ForegroundColor White
 Write-Host "  Stop all:      .\run-docker-full.ps1 -Down" -ForegroundColor White
 Write-Host "  Rebuild:       .\run-docker-full.ps1 -Build" -ForegroundColor White
 Write-Host ""
