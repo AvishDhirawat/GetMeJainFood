@@ -301,6 +301,65 @@ export const EXTERNAL_PLATFORMS: Record<ExternalPlatform, string> = {
   'own-app': 'Own App',
 }
 
+// Provider Categories (Jain-specific)
+export type ProviderCategory =
+  | 'tiffin-center'
+  | 'caterer'
+  | 'bhojnalaya'
+  | 'restaurant'
+  | 'baker'
+  | 'raw-material'
+  | 'sodh-khana'
+  | 'home-chef'
+  | 'chauka-bai'
+
+export const PROVIDER_CATEGORIES: Record<ProviderCategory, { en: string; hi: string }> = {
+  'tiffin-center': { en: 'Tiffin Center', hi: 'टिफिन सेंटर' },
+  'caterer': { en: 'Caterer', hi: 'कैटरर' },
+  'bhojnalaya': { en: 'Bhojnalaya', hi: 'भोजनालय' },
+  'restaurant': { en: 'Restaurant', hi: 'रेस्टोरेंट' },
+  'baker': { en: 'Baker', hi: 'बेकर' },
+  'raw-material': { en: 'Raw Material Provider', hi: 'कच्चा माल प्रदाता' },
+  'sodh-khana': { en: 'Sodh Khana Provider', hi: 'सोध खाना प्रदाता' },
+  'home-chef': { en: 'Home Chef', hi: 'होम शेफ' },
+  'chauka-bai': { en: 'Chauka Bai', hi: 'चौका बाई' },
+}
+
+// Food Categories
+export type FoodCategory =
+  | 'raw-materials'
+  | 'bakery'
+  | 'sweets'
+  | 'icecream'
+  | 'namkeen'
+  | 'dry-fruits'
+  | 'tiffin-thali'
+  | 'sodh-ka-khana'
+  | 'sodh-ki-samgri'
+  | 'nirvaan-laddu'
+
+export const FOOD_CATEGORIES: Record<FoodCategory, { en: string; hi: string }> = {
+  'raw-materials': { en: 'Daily Use Raw Materials', hi: 'दैनिक उपयोग कच्चा माल' },
+  'bakery': { en: 'Bakery Items & Desserts', hi: 'बेकरी आइटम और मिठाइयाँ' },
+  'sweets': { en: 'Sweets', hi: 'मिठाइयाँ' },
+  'icecream': { en: 'Icecream', hi: 'आइसक्रीम' },
+  'namkeen': { en: 'Namkeen & Snacks', hi: 'नमकीन और स्नैक्स' },
+  'dry-fruits': { en: 'Dry Fruits', hi: 'सूखे मेवे' },
+  'tiffin-thali': { en: 'Jain Tiffin / Thali', hi: 'जैन टिफिन / थाली' },
+  'sodh-ka-khana': { en: 'Sodh Ka Khana', hi: 'सोध का खाना' },
+  'sodh-ki-samgri': { en: 'Sodh Ki Samgri', hi: 'सोध की सामग्री' },
+  'nirvaan-laddu': { en: 'Nirvaan Laddu', hi: 'निर्वाण लड्डू' },
+}
+
+// External Platforms
+export type ExternalPlatform = 'swiggy' | 'zomato' | 'own-app'
+
+export const EXTERNAL_PLATFORMS: Record<ExternalPlatform, string> = {
+  'swiggy': 'Swiggy',
+  'zomato': 'Zomato',
+  'own-app': 'Own App',
+}
+
 // Jain dietary tags
 export const JAIN_TAGS = {
   sattvic: 'Sattvic',

@@ -192,7 +192,9 @@ cp .env.example .env
 - API Health: http://localhost:8080/health
 - MinIO Console: http://localhost:9001
 
-### Available Commands
+### Supported Languages
+- **English (EN)** - Default
+- **Hindi (हिन्दी)** - Full translation support
 
 ```powershell
 .\run.ps1                              # Start dev environment
