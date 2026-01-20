@@ -10,24 +10,34 @@ Write-Host "  GetMeJainFood - Docker Development   " -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
+# Define env file paths first
+$envFile = Join-Path $PSScriptRoot ".env"
+$envExampleFile = Join-Path $PSScriptRoot ".env.example"
+
 Set-Location -Path $PSScriptRoot\docker
 
 if ($Down) {
     Write-Host "Stopping all services..." -ForegroundColor Yellow
-    docker compose --env-file ../.env down
+    docker compose --env-file $envFile down
     Write-Host "All services stopped!" -ForegroundColor Green
     exit 0
 }
 
-# Check if .env file exists
-$envFile = Join-Path $PSScriptRoot ".env"
+# Check if .env file exists, create from example if not
+
 if (-not (Test-Path $envFile)) {
-    Write-Host "ERROR: .env file not found!" -ForegroundColor Red
-    Write-Host "Please create a .env file from the example:" -ForegroundColor Yellow
-    Write-Host "  Copy-Item .env.example .env" -ForegroundColor White
-    Write-Host "Then edit .env with your configuration values." -ForegroundColor Yellow
-    Set-Location -Path $PSScriptRoot
-    exit 1
+    Write-Host "WARNING: .env file not found!" -ForegroundColor Yellow
+
+    if (Test-Path $envExampleFile) {
+        Write-Host "Creating .env from .env.example with default values..." -ForegroundColor Yellow
+        Copy-Item $envExampleFile $envFile
+        Write-Host ".env file created! You can customize it later." -ForegroundColor Green
+    } else {
+        Write-Host "ERROR: Neither .env nor .env.example found!" -ForegroundColor Red
+        Write-Host "Please create a .env file with required configuration." -ForegroundColor Yellow
+        Set-Location -Path $PSScriptRoot
+        exit 1
+    }
 }
 
 # Check if Docker is running
@@ -83,8 +93,8 @@ Write-Host "  API Health:  http://localhost:8080/health" -ForegroundColor White
 Write-Host "  MinIO:       http://localhost:9001 (credentials in .env)" -ForegroundColor White
 Write-Host ""
 Write-Host "Useful commands:" -ForegroundColor Cyan
-Write-Host "  View logs:     cd docker; docker compose --env-file ../.env logs -f" -ForegroundColor White
-Write-Host "  View API logs: cd docker; docker compose --env-file ../.env logs -f api" -ForegroundColor White
+Write-Host "  View logs:     cd docker; docker compose --env-file `$envFile logs -f" -ForegroundColor White
+Write-Host "  View API logs: cd docker; docker compose --env-file `$envFile logs -f api" -ForegroundColor White
 Write-Host "  Stop all:      .\run-docker-full.ps1 -Down" -ForegroundColor White
 Write-Host "  Rebuild:       .\run-docker-full.ps1 -Build" -ForegroundColor White
 Write-Host ""

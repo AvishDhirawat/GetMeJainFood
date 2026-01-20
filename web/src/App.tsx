@@ -20,6 +20,7 @@ import HomePage from './pages/HomePage'
 import SearchPage from './pages/SearchPage'
 import ProviderDetailPage from './pages/ProviderDetailPage'
 import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
 import FAQPage from './pages/FAQPage'
 
 // Buyer Pages
@@ -106,6 +107,7 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
           {/* Main Layout Routes (Buyer/Public) */}
           <Route element={<MainLayout />}>

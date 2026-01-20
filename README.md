@@ -2,6 +2,37 @@
 
 A two-sided Jain-specific food discovery and ordering platform connecting buyers with food providers. Built with Go (backend) and React/TypeScript (frontend), focusing on strictly Jain dietary compliance, menu transparency, and seamless ordering experience.
 
+## 🚀 Quick Start
+
+### Development Mode (Cloud DB + Redis)
+```powershell
+# 1. Start MinIO (file storage)
+cd docker && docker compose -f docker-compose.neon.yml up -d && cd ..
+
+# 2. Run backend
+go run ./cmd/api
+
+# 3. Run frontend (new terminal)
+cd web && npm run dev
+```
+
+**URLs:**
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8080
+- MinIO: http://localhost:9001
+
+### Using Helper Script
+```powershell
+.\start.ps1 -Mode dev      # Cloud DB + Upstash Redis
+.\start.ps1 -Mode local    # All services in Docker
+.\start.ps1 -Mode mock     # Frontend only (no backend)
+.\start.ps1 -Action stop   # Stop all Docker services
+```
+
+📚 **Full documentation:** See [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md)
+
+---
+
 ## 🌟 Features
 
 ### For Buyers
@@ -105,6 +136,37 @@ GetMeJainFood/
 .\run.ps1 -Mode local
 ```
 
+## 🌐 Deploy for Free
+
+Deploy JainFood to the internet **completely free** using these services:
+
+| Component | Service | Free Tier |
+|-----------|---------|-----------|
+| Backend | [Render.com](https://render.com) | 750 hours/month |
+| Frontend | [Vercel](https://vercel.com) | Unlimited |
+| Database | [Neon.tech](https://neon.tech) | 500MB |
+| Redis | [Upstash](https://upstash.com) | 10K commands/day |
+
+### Quick Deploy
+
+1. **Push to GitHub** (if not already):
+   ```bash
+   git remote add origin https://github.com/YOUR_USERNAME/GetMeJainFood.git
+   git push -u origin main
+   ```
+
+2. **Deploy Backend** on Render:
+   - Go to [render.com](https://render.com) → New Web Service
+   - Connect your GitHub repo
+   - Render auto-detects `render.yaml` configuration
+
+3. **Deploy Frontend** on Vercel:
+   - Go to [vercel.com](https://vercel.com) → Add New Project
+   - Import your repo, set root directory to `web`
+   - Add env var: `VITE_API_URL=https://your-api.onrender.com`
+
+📚 **Full guide:** See [`docs/free-deployment-guide.md`](docs/free-deployment-guide.md)
+
 ### Manual Setup
 
 1. **Clone & Configure**
@@ -130,7 +192,9 @@ cp .env.example .env
 - API Health: http://localhost:8080/health
 - MinIO Console: http://localhost:9001
 
-### Available Commands
+### Supported Languages
+- **English (EN)** - Default
+- **Hindi (हिन्दी)** - Full translation support
 
 ```powershell
 .\run.ps1                              # Start dev environment

@@ -1,0 +1,38 @@
+# Render Blueprint - render.yaml
+# This file allows one-click deployment on Render.com
+# Documentation: https://render.com/docs/blueprint-spec
+
+services:
+  # Backend API Service
+  - type: web
+    name: jainfood-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: singapore  # Change to your preferred region
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: prod
+      - key: PORT
+        value: 8080
+      - key: GIN_MODE
+        value: release
+      - key: DATABASE_URL
+        sync: false  # Set manually - get from Neon
+      - key: REDIS_URL
+        sync: false  # Set manually - get from Upstash
+      - key: JWT_SECRET
+        generateValue: true  # Auto-generate secure random value
+      - key: OTP_SECRET
+        generateValue: true  # Auto-generate secure random value
+      - key: NOTIFY_SERVICE
+        value: smsindiahub
+      - key: SMSINDIAHUB_API_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: SMSINDIAHUB_SENDER_ID
+        value: JAINFO
+      - key: SMSINDIAHUB_CHANNEL
+        value: Trans
+    autoDeploy: true  # Auto-deploy on git push

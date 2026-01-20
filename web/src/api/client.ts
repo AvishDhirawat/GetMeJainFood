@@ -30,7 +30,11 @@ import {
   mockReviewApi,
 } from './mockApi'
 
-const API_BASE_URL = '/v1'
+// API URL configuration for different environments
+// In production, set VITE_API_URL to your backend URL (e.g., https://jainfood-api.onrender.com)
+const API_BASE_URL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/v1`
+  : '/v1'
 
 // Enable mock mode when backend is not available
 // Set to true for development without backend, false to use real API
@@ -96,13 +100,110 @@ api.interceptors.response.use(
 )
 
 // ==================== AUTH API ====================
+export interface CheckPhoneResponse {
+  exists: boolean
+  can_login: boolean
+  can_register: boolean
+}
+
+export interface RegisterRequest {
+  phone: string
+  otp: string
+  name: string
+  email?: string
+  role?: 'buyer' | 'provider'
+  termsAccepted?: boolean
+}
+
+export interface RegisterResponse {
+  message: string
+  token: string
+  user_id: string
+  user: User
+}
+
+export interface LoginRequest {
+  phone: string
+  otp: string
+}
+
+export interface LoginResponse {
+  message: string
+  token: string
+  user_id: string
+  user: User
+}
+
 export const authApi = {
-  sendOtp: async (phone: string): Promise<OtpResponse> => {
-    if (USE_MOCK_API) return mockAuthApi.sendOtp(phone)
-    const { data } = await api.post('/auth/send-otp', { phone })
+  // Check if phone number is registered
+  checkPhone: async (phone: string): Promise<CheckPhoneResponse> => {
+    if (USE_MOCK_API) {
+      // Mock: treat any phone starting with '9999' as existing
+      const exists = phone.startsWith('9999')
+      return { exists, can_login: exists, can_register: !exists }
+    }
+    const { data } = await api.post('/auth/check-phone', { phone })
     return data
   },
 
+  // Send OTP (for both login and registration)
+  sendOtp: async (phone: string, purpose?: 'login' | 'register'): Promise<OtpResponse> => {
+    if (USE_MOCK_API) return mockAuthApi.sendOtp(phone)
+    const { data } = await api.post('/auth/send-otp', { phone, purpose })
+    return data
+  },
+
+  // Register new user
+  register: async (request: RegisterRequest): Promise<RegisterResponse> => {
+    if (USE_MOCK_API) {
+      const response = await mockAuthApi.verifyOtp(request.phone, request.otp, request.role)
+      return {
+        message: 'registration_success',
+        token: response.token,
+        user_id: response.user_id,
+        user: {
+          id: response.user_id,
+          phone: request.phone,
+          name: request.name,
+          email: request.email || '',
+          role: request.role || 'buyer',
+          preferences: null,
+          language: 'en',
+          blocked: false,
+          created_at: new Date().toISOString(),
+        },
+      }
+    }
+    const { data } = await api.post('/auth/register', request)
+    return data
+  },
+
+  // Login existing user
+  login: async (request: LoginRequest): Promise<LoginResponse> => {
+    if (USE_MOCK_API) {
+      const response = await mockAuthApi.verifyOtp(request.phone, request.otp)
+      return {
+        message: 'login_success',
+        token: response.token,
+        user_id: response.user_id,
+        user: {
+          id: response.user_id,
+          phone: request.phone,
+          name: 'Test User',
+          email: '',
+          role: 'buyer',
+          preferences: null,
+          language: 'en',
+          blocked: false,
+          created_at: new Date().toISOString(),
+        },
+      }
+    }
+    const { data } = await api.post('/auth/login', request)
+    return data
+  },
+
+  // Legacy: verify OTP (for backward compatibility)
   verifyOtp: async (phone: string, otp: string, role?: string): Promise<AuthResponse> => {
     if (USE_MOCK_API) return mockAuthApi.verifyOtp(phone, otp, role)
     const { data } = await api.post('/auth/verify-otp', { phone, otp, role })
@@ -419,6 +520,173 @@ export const reviewApi = {
     if (USE_MOCK_API) return mockReviewApi.delete(reviewId)
     await api.delete(`/reviews/${reviewId}`)
   },
+}
+
+// ==================== PAYMENT API (Razorpay) ====================
+export interface RazorpayOrderResponse {
+  razorpay_order_id: string
+  amount: number
+  currency: string
+  key_id: string
+}
+
+export interface PaymentVerifyRequest {
+  razorpay_order_id: string
+  razorpay_payment_id: string
+  razorpay_signature: string
+  order_id: string
+}
+
+export const paymentApi = {
+  // Create a Razorpay order
+  createOrder: async (orderId: string, amount: number, currency = 'INR'): Promise<RazorpayOrderResponse> => {
+    if (USE_MOCK_API) {
+      // Mock response for development
+      return {
+        razorpay_order_id: 'order_mock_' + Date.now(),
+        amount: amount,
+        currency: currency,
+        key_id: 'rzp_test_mock',
+      }
+    }
+    const { data } = await api.post('/payments/create-order', {
+      order_id: orderId,
+      amount: amount, // Amount in paise
+      currency: currency,
+    })
+    return data
+  },
+
+  // Verify payment after Razorpay checkout
+  verifyPayment: async (request: PaymentVerifyRequest): Promise<{ message: string; payment_id: string }> => {
+    if (USE_MOCK_API) {
+      return { message: 'payment verified', payment_id: 'pay_mock_' + Date.now() }
+    }
+    const { data } = await api.post('/payments/verify', request)
+    return data
+  },
+
+  // Get payment details
+  getPaymentDetails: async (paymentId: string): Promise<{
+    id: string
+    amount: number
+    currency: string
+    status: string
+    method: string
+  }> => {
+    if (USE_MOCK_API) {
+      return {
+        id: paymentId,
+        amount: 10000,
+        currency: 'INR',
+        status: 'captured',
+        method: 'upi',
+      }
+    }
+    const { data } = await api.get(`/payments/${paymentId}`)
+    return data
+  },
+}
+
+// ==================== RAZORPAY CHECKOUT HELPER ====================
+declare global {
+  interface Window {
+    Razorpay: new (options: RazorpayOptions) => RazorpayInstance
+  }
+}
+
+interface RazorpayOptions {
+  key: string
+  amount: number
+  currency: string
+  name: string
+  description: string
+  order_id: string
+  handler: (response: RazorpayResponse) => void
+  prefill?: {
+    name?: string
+    email?: string
+    contact?: string
+  }
+  theme?: {
+    color?: string
+  }
+  modal?: {
+    ondismiss?: () => void
+  }
+}
+
+interface RazorpayInstance {
+  open: () => void
+  close: () => void
+}
+
+interface RazorpayResponse {
+  razorpay_order_id: string
+  razorpay_payment_id: string
+  razorpay_signature: string
+}
+
+// Helper function to initiate Razorpay checkout
+export const initiateRazorpayCheckout = async (
+  orderId: string,
+  amountInPaise: number,
+  userName: string,
+  userPhone: string,
+  userEmail: string,
+  onSuccess: (paymentId: string) => void,
+  onFailure: (error: string) => void
+): Promise<void> => {
+  try {
+    // Create order on backend
+    const orderResponse = await paymentApi.createOrder(orderId, amountInPaise)
+
+    // Check if Razorpay is loaded
+    if (!window.Razorpay) {
+      throw new Error('Razorpay SDK not loaded. Add <script src="https://checkout.razorpay.com/v1/checkout.js"></script> to your HTML.')
+    }
+
+    const options: RazorpayOptions = {
+      key: orderResponse.key_id,
+      amount: orderResponse.amount,
+      currency: orderResponse.currency,
+      name: 'JainFood',
+      description: `Order #${orderId}`,
+      order_id: orderResponse.razorpay_order_id,
+      handler: async (response: RazorpayResponse) => {
+        try {
+          // Verify payment on backend
+          const verifyResponse = await paymentApi.verifyPayment({
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+            order_id: orderId,
+          })
+          onSuccess(verifyResponse.payment_id)
+        } catch {
+          onFailure('Payment verification failed')
+        }
+      },
+      prefill: {
+        name: userName,
+        contact: userPhone,
+        email: userEmail,
+      },
+      theme: {
+        color: '#f97316', // Primary orange color
+      },
+      modal: {
+        ondismiss: () => {
+          onFailure('Payment cancelled by user')
+        },
+      },
+    }
+
+    const razorpay = new window.Razorpay(options)
+    razorpay.open()
+  } catch (err) {
+    onFailure(err instanceof Error ? err.message : 'Failed to initiate payment')
+  }
 }
 
 export default api

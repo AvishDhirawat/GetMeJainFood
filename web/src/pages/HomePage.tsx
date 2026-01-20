@@ -277,7 +277,7 @@ function ProviderCard({ provider, index }: { provider: ProviderSearchResult; ind
 // Nearby Providers Section
 function NearbyProvidersSection() {
   const { lat, lng } = useLocationStore()
-  const { t, language } = useLanguageStore()
+  const { language } = useLanguageStore()
 
   const { data: providers, isLoading, error } = useQuery({
     queryKey: ['nearby-providers', lat, lng],

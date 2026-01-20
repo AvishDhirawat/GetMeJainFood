@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"jainfood/internal/db"
 	"jainfood/internal/models"
+
+	"github.com/google/uuid"
 )
 
 // CreateUser creates a new user with phone-based registration.
@@ -150,3 +151,59 @@ func UnblockUser(ctx context.Context, userID string) error {
 	return nil
 }
 
+// CheckPhoneExists checks if a phone number is already registered
+func CheckPhoneExists(ctx context.Context, phone string) (bool, error) {
+	var exists bool
+	err := db.Pool.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM users WHERE phone = $1)
+	`, phone).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
+// RegisterUser creates a new user with full registration details.
+// If termsAccepted is true, records terms_accepted_at.
+func RegisterUser(ctx context.Context, phone, name, email, role string, termsAccepted bool) (*models.User, error) {
+	// Check if user already exists
+	exists, err := CheckPhoneExists(ctx, phone)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, fmt.Errorf("phone number already registered")
+	}
+
+	id := uuid.New().String()
+
+	_, err = db.Pool.Exec(ctx, `
+		INSERT INTO users (id, phone, name, email, role, created_at, terms_accepted_at)
+		VALUES ($1, $2, $3, $4, $5, NOW(), CASE WHEN $6 THEN NOW() ELSE NULL END)
+	`, id, phone, name, email, role, termsAccepted)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.User{
+		ID:    id,
+		Phone: phone,
+		Name:  name,
+		Email: email,
+		Role:  role,
+	}, nil
+}
+
+// GetUserByPhoneWithStatus retrieves user by phone with blocked status check
+func GetUserByPhoneWithStatus(ctx context.Context, phone string) (*models.User, bool, error) {
+	u := &models.User{}
+	var blocked bool
+	err := db.Pool.QueryRow(ctx, `
+		SELECT id, phone, name, email, role, preferences, blocked, created_at
+		FROM users WHERE phone = $1
+	`, phone).Scan(&u.ID, &u.Phone, &u.Name, &u.Email, &u.Role, &u.Preferences, &blocked, &u.CreatedAt)
+	if err != nil {
+		return nil, false, err
+	}
+	return u, blocked, nil
+}

@@ -1,0 +1,33 @@
+# Docker Compose for Development with Cloud Services
+# Uses Neon for PostgreSQL and Upstash for Redis
+# Only runs MinIO locally for file storage
+#
+# Usage:
+#   docker compose -f docker-compose.neon.yml --env-file ../.env up -d
+
+name: jain-food-cloud
+
+services:
+
+  minio:
+    container_name: jain_food-minio
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    env_file:
+      - ../.env
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set in .env file}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set in .env file}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  miniodata:
