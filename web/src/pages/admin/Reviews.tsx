@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { useSearchParams } from 'react-router-dom'
@@ -203,7 +202,6 @@ function ReviewCard({
 }
 
 export default function AdminReviews() {
-  const { t } = useLanguageStore()
   const [searchParams] = useSearchParams()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<string>(searchParams.get('filter') || 'all')

@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
   UsersIcon,
@@ -63,8 +62,6 @@ function StatCard({
 }
 
 export default function AdminDashboard() {
-  const { t } = useLanguageStore()
-
   // In production, fetch from API
   const stats = mockStats
 

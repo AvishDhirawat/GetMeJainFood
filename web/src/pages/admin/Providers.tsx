@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -7,11 +6,9 @@ import {
   MagnifyingGlassIcon,
   BuildingStorefrontIcon,
   MapPinIcon,
-  StarIcon,
   CheckBadgeIcon,
   XCircleIcon,
   EyeIcon,
-  NoSymbolIcon,
 } from '@heroicons/react/24/outline'
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
 import { useLanguageStore } from '../../store/languageStore'
@@ -270,7 +267,6 @@ function ProviderRow({
 }
 
 export default function AdminProviders() {
-  const { t } = useLanguageStore()
   const [searchParams] = useSearchParams()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>(searchParams.get('filter') || 'all')

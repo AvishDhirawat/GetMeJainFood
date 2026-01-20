@@ -21,7 +21,6 @@ const navItems = [
 
 export default function AdminLayout() {
   const { logout, user } = useAuthStore()
-  const { t } = useLanguageStore()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
