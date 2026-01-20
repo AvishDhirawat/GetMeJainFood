@@ -54,14 +54,26 @@ func main() {
 	}
 	defer db.Close()
 
+	// Fail fast if schema/migrations are missing (common cause of auth/API 500s)
+	if ok, err := db.TableExists(ctx, "users"); err != nil {
+		logger.Fatal("db schema check failed", zap.Error(err))
+	} else if !ok {
+		logger.Fatal("db schema missing: users table not found. Apply SQL migrations in /migrations to your DATABASE_URL before starting the API.")
+	}
+
 	// Connect to Redis
 	// Support both REDIS_URL (for cloud) and REDIS_ADDR (for local)
-	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
-		if err := redisclient.ConnectWithURL(redisURL); err != nil {
+	redisConnectCtx, cancelRedisConnect := context.WithTimeout(ctx, 5*time.Second)
+	defer cancelRedisConnect()
+
+	if cfg.RedisURL != "" {
+		if err := redisclient.ConnectWithURL(redisConnectCtx, cfg.RedisURL); err != nil {
 			logger.Fatal("redis connect failed", zap.Error(err))
 		}
 	} else {
-		redisclient.Connect(cfg.RedisAddr)
+		if err := redisclient.Connect(redisConnectCtx, cfg.RedisAddr); err != nil {
+			logger.Fatal("redis connect failed", zap.Error(err))
+		}
 	}
 
 	// Initialize media client (optional - for object storage)
@@ -143,7 +155,7 @@ func main() {
 			// Check if phone number exists (for registration flow)
 			authGroup.POST("/check-phone", func(c *gin.Context) {
 				var body struct {
-					Phone string `json:"phone" binding:"required"`
+					Phone string `json:"phone" binding:"required,min=4"`
 				}
 				if err := c.ShouldBindJSON(&body); err != nil {
 					c.JSON(400, gin.H{"error": err.Error()})
@@ -153,13 +165,17 @@ func main() {
 				exists, err := users.CheckPhoneExists(ctx, body.Phone)
 				if err != nil {
 					logger.Error("phone check failed", zap.Error(err))
+					if cfg.IsDevelopment() {
+						c.JSON(500, gin.H{"error": "failed to check phone", "details": err.Error()})
+						return
+					}
 					c.JSON(500, gin.H{"error": "failed to check phone"})
 					return
 				}
 
 				c.JSON(200, gin.H{
-					"exists":     exists,
-					"can_login":  exists,
+					"exists":       exists,
+					"can_login":    exists,
 					"can_register": !exists,
 				})
 			})
@@ -167,8 +183,8 @@ func main() {
 			// Send OTP (for both login and registration)
 			authGroup.POST("/send-otp", func(c *gin.Context) {
 				var body struct {
-					Phone    string `json:"phone" binding:"required"`
-					Purpose  string `json:"purpose"` // "login" or "register"
+					Phone   string `json:"phone" binding:"required,min=4"`
+					Purpose string `json:"purpose"` // "login" or "register"
 				}
 				if err := c.ShouldBindJSON(&body); err != nil {
 					logger.Error("send-otp: invalid request body", zap.Error(err))
@@ -177,7 +193,7 @@ func main() {
 				}
 
 				logger.Info("send-otp: request received",
-					zap.String("phone", body.Phone[:4]+"******"),
+					zap.String("phone", util.MaskPhone(body.Phone)),
 					zap.String("purpose", body.Purpose),
 					zap.String("env", string(cfg.Env)))
 
@@ -185,18 +201,22 @@ func main() {
 				exists, err := users.CheckPhoneExists(ctx, body.Phone)
 				if err != nil {
 					logger.Error("send-otp: phone check failed", zap.Error(err))
+					if cfg.IsDevelopment() {
+						c.JSON(500, gin.H{"error": "failed to check phone", "details": err.Error()})
+						return
+					}
 					c.JSON(500, gin.H{"error": "failed to check phone"})
 					return
 				}
 
 				// Validate purpose
 				if body.Purpose == "login" && !exists {
-					logger.Warn("send-otp: phone not registered for login", zap.String("phone", body.Phone[:4]+"******"))
+					logger.Warn("send-otp: phone not registered for login", zap.String("phone", util.MaskPhone(body.Phone)))
 					c.JSON(400, gin.H{"error": "phone_not_registered", "message": "This phone number is not registered. Please sign up first."})
 					return
 				}
 				if body.Purpose == "register" && exists {
-					logger.Warn("send-otp: phone already registered", zap.String("phone", body.Phone[:4]+"******"))
+					logger.Warn("send-otp: phone already registered", zap.String("phone", util.MaskPhone(body.Phone)))
 					c.JSON(400, gin.H{"error": "phone_already_registered", "message": "This phone number is already registered. Please login instead."})
 					return
 				}
@@ -212,6 +232,10 @@ func main() {
 				key := "otp:" + body.Phone
 				if err := auth.StoreOTP(ctx, key, hash, 10*time.Minute); err != nil {
 					logger.Error("send-otp: redis set failed", zap.Error(err))
+					if cfg.IsDevelopment() {
+						c.JSON(500, gin.H{"error": "failed to store otp", "details": err.Error()})
+						return
+					}
 					c.JSON(500, gin.H{"error": "failed to store otp"})
 					return
 				}
@@ -229,7 +253,7 @@ func main() {
 					} else {
 						smsSent = true
 						logger.Info("send-otp: SMS sent successfully",
-							zap.String("phone", body.Phone[:4]+"******"),
+							zap.String("phone", util.MaskPhone(body.Phone)),
 							zap.String("service", cfg.NotifyService))
 					}
 				} else {
@@ -266,14 +290,20 @@ func main() {
 			// Register new user
 			authGroup.POST("/register", func(c *gin.Context) {
 				var body struct {
-					Phone string `json:"phone" binding:"required"`
-					OTP   string `json:"otp" binding:"required"`
-					Name  string `json:"name" binding:"required"`
-					Email string `json:"email"`
-					Role  string `json:"role"` // "buyer" or "provider"
+					Phone         string `json:"phone" binding:"required,min=4"`
+					OTP           string `json:"otp" binding:"required"`
+					Name          string `json:"name" binding:"required"`
+					Email         string `json:"email"`
+					Role          string `json:"role"` // "buyer" or "provider"
+					TermsAccepted bool   `json:"termsAccepted" binding:"required"`
 				}
 				if err := c.ShouldBindJSON(&body); err != nil {
 					c.JSON(400, gin.H{"error": err.Error()})
+					return
+				}
+
+				if !body.TermsAccepted {
+					c.JSON(400, gin.H{"error": "terms_not_accepted", "message": "You must accept Terms & Conditions to register."})
 					return
 				}
 
@@ -300,7 +330,7 @@ func main() {
 				}
 
 				// Register the user
-				user, err := users.RegisterUser(ctx, body.Phone, body.Name, body.Email, role)
+				user, err := users.RegisterUser(ctx, body.Phone, body.Name, body.Email, role, true)
 				if err != nil {
 					if err.Error() == "phone number already registered" {
 						c.JSON(400, gin.H{"error": "phone_already_registered", "message": "This phone number is already registered."})
@@ -343,7 +373,7 @@ func main() {
 			// Login (verify OTP for existing users)
 			authGroup.POST("/login", func(c *gin.Context) {
 				var body struct {
-					Phone string `json:"phone" binding:"required"`
+					Phone string `json:"phone" binding:"required,min=4"`
 					OTP   string `json:"otp" binding:"required"`
 				}
 				if err := c.ShouldBindJSON(&body); err != nil {
@@ -408,7 +438,7 @@ func main() {
 			// Legacy verify-otp endpoint (for backward compatibility)
 			authGroup.POST("/verify-otp", func(c *gin.Context) {
 				var body struct {
-					Phone string `json:"phone" binding:"required"`
+					Phone string `json:"phone" binding:"required,min=4"`
 					OTP   string `json:"otp" binding:"required"`
 					Role  string `json:"role"` // Optional: default to "buyer"
 				}
@@ -965,14 +995,29 @@ func main() {
 					"order_code":  orderCode,
 				})
 
-				// Send OTP notification for order confirmation
-				notifier := notify.NewNotifier()
-				if err := notifier.SendOTP("order:"+orderCode, otp); err != nil {
-					logger.Warn("failed to send order OTP notification", zap.Error(err))
+				// Send OTP notification for order confirmation to the buyer's phone number
+				buyer, err := users.GetUserByID(ctx, userID)
+				if err != nil {
+					logger.Warn("failed to load buyer for order OTP notification",
+						zap.Error(err),
+						zap.String("order_id", orderID),
+						zap.String("buyer_id", userID))
+				} else if buyer.Phone == "" {
+					logger.Warn("buyer phone missing for order OTP notification",
+						zap.String("order_id", orderID),
+						zap.String("buyer_id", userID))
+				} else {
+					notifier := notify.NewNotifier()
+					if err := notifier.SendOTP(buyer.Phone, otp); err != nil {
+						logger.Warn("failed to send order OTP notification",
+							zap.Error(err),
+							zap.String("order_id", orderID),
+							zap.String("buyer_id", userID))
+					}
 				}
 
-				// In development mode, return OTP in response
-				if os.Getenv("GIN_MODE") != "release" {
+				// In development/local environments, optionally return OTP in response
+				if cfg.ShouldReturnOTPInResponse() {
 					c.JSON(201, gin.H{
 						"order_id":   orderID,
 						"order_code": orderCode,
@@ -980,6 +1025,7 @@ func main() {
 					})
 					return
 				}
+
 				c.JSON(201, gin.H{
 					"order_id":   orderID,
 					"order_code": orderCode,

@@ -22,7 +22,7 @@ NC='\033[0m' # No Color
 
 # Default values
 BASE_URL="${BASE_URL:-http://localhost:8080}"
-PHONE="${PHONE:-7506481803}"
+PHONE="${PHONE:-+917506481803}"
 VERBOSE=false
 
 # Test counters

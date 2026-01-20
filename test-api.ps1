@@ -54,21 +54,25 @@ function Test-Api {
 
     Write-Host "[$($TestResults.Passed + $TestResults.Failed + $TestResults.Skipped + 1)] Testing: $Name" -ForegroundColor Yellow -NoNewline
 
+    $uri = "$BaseUrl$Endpoint"
+    $params = @{
+        Uri         = $uri
+        Method      = $Method
+        Headers     = @{ "Content-Type" = "application/json" } + $Headers
+        TimeoutSec  = 30
+        ErrorAction = "Stop"
+    }
+
+    if ($Body) {
+        $params.Body = ($Body | ConvertTo-Json -Depth 10)
+    }
+
     try {
-        $uri = "$BaseUrl$Endpoint"
-        $params = @{
-            Uri = $uri
-            Method = $Method
-            Headers = @{ "Content-Type" = "application/json" } + $Headers
-            TimeoutSec = 30
-            UseBasicParsing = $true
-        }
+        $response = Invoke-RestMethod @params
 
-        if ($Body) {
-            $params.Body = ($Body | ConvertTo-Json -Depth 10)
+        if ($ExpectedStatus -ne 200) {
+            throw "Expected HTTP $ExpectedStatus but request succeeded"
         }
-
-        $response = Invoke-RestMethod @params -StatusCodeVariable statusCode
 
         if ($Validate) {
             $validateResult = & $Validate $response
@@ -77,7 +81,7 @@ function Test-Api {
             }
         }
 
-        Write-Host " ✓ PASSED" -ForegroundColor Green
+        Write-Host " [PASS]" -ForegroundColor Green
         $TestResults.Passed++
 
         if ($Verbose) {
@@ -87,16 +91,29 @@ function Test-Api {
         return $response
     }
     catch {
+        $statusCode = $null
         $errorMsg = $_.Exception.Message
 
-        # Check if it's an expected error status
-        if ($_.Exception.Response.StatusCode.value__ -eq $ExpectedStatus -and $ExpectedStatus -ne 200) {
-            Write-Host " ✓ PASSED (Expected error)" -ForegroundColor Green
+        # Try to extract HTTP status code (works for Invoke-RestMethod in Windows PowerShell 5.1)
+        if ($_.Exception -and $_.Exception.Response) {
+            try {
+                $statusCode = [int]$_.Exception.Response.StatusCode
+            }
+            catch {
+                $statusCode = $null
+            }
+        }
+
+        if ($statusCode -ne $null -and $statusCode -eq $ExpectedStatus -and $ExpectedStatus -ne 200) {
+            Write-Host " [PASS] (Expected HTTP $ExpectedStatus)" -ForegroundColor Green
             $TestResults.Passed++
             return $null
         }
 
-        Write-Host " ✗ FAILED" -ForegroundColor Red
+        Write-Host " [FAIL]" -ForegroundColor Red
+        if ($statusCode -ne $null) {
+            Write-Host "  Status: $statusCode" -ForegroundColor Red
+        }
         Write-Host "  Error: $errorMsg" -ForegroundColor Red
         $TestResults.Failed++
         return $null

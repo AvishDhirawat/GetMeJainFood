@@ -6,6 +6,16 @@ import (
 )
 
 func TestLoad(t *testing.T) {
+	// Load() requires these env vars; set dummy values for test.
+	os.Setenv("DATABASE_URL", "postgres://user:pass@localhost:5432/db?sslmode=disable")
+	os.Setenv("JWT_SECRET", "test_jwt_secret")
+	os.Setenv("OTP_SECRET", "test_otp_secret")
+	defer func() {
+		os.Unsetenv("DATABASE_URL")
+		os.Unsetenv("JWT_SECRET")
+		os.Unsetenv("OTP_SECRET")
+	}()
+
 	cfg := Load()
 
 	if cfg == nil {
@@ -28,9 +38,15 @@ func TestLoad(t *testing.T) {
 
 func TestLoad_WithEnvOverrides(t *testing.T) {
 	// Set environment variables
+	os.Setenv("DATABASE_URL", "postgres://user:pass@localhost:5432/db?sslmode=disable")
+	os.Setenv("JWT_SECRET", "test_jwt_secret")
+	os.Setenv("OTP_SECRET", "test_otp_secret")
 	os.Setenv("PORT", "9090")
 	os.Setenv("REDIS_ADDR", "redis:6380")
 	defer func() {
+		os.Unsetenv("DATABASE_URL")
+		os.Unsetenv("JWT_SECRET")
+		os.Unsetenv("OTP_SECRET")
 		os.Unsetenv("PORT")
 		os.Unsetenv("REDIS_ADDR")
 	}()

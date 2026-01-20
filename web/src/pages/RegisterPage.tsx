@@ -156,6 +156,7 @@ export default function RegisterPage() {
         name: name.trim(),
         email: email.trim() || undefined,
         role,
+        termsAccepted: true,
       })
 
       login(response.token, response.user)
@@ -511,31 +512,34 @@ export default function RegisterPage() {
                 </div>
 
                 {/* Terms for Provider */}
-                {role === 'provider' && (
-                  <div className="mb-6 p-4 bg-amber-50 rounded-xl border border-amber-200">
-                    <label className="flex items-start gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={termsAccepted}
-                        onChange={(e) => setTermsAccepted(e.target.checked)}
-                        className="w-5 h-5 mt-0.5 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
-                      />
-                      <span className="text-sm text-gray-700">
-                        {language === 'hi'
-                          ? 'मैं '
-                          : 'I accept the '}
-                        <button
-                          type="button"
-                          onClick={() => setShowTerms(true)}
-                          className="text-primary-600 font-medium hover:underline"
-                        >
-                          {language === 'hi' ? 'नियम और शर्तें' : 'Terms & Conditions'}
-                        </button>
-                        {language === 'hi' ? ' स्वीकार करता/करती हूं' : ''}
-                      </span>
-                    </label>
-                  </div>
-                )}
+                {/* Terms acceptance (required for both Food Lover and Provider) */}
+                <div
+                  className={`mb-6 p-4 rounded-xl border ${
+                    role === 'provider' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'
+                  }`}
+                >
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={termsAccepted}
+                      onChange={(e) => setTermsAccepted(e.target.checked)}
+                      className="w-5 h-5 mt-0.5 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-gray-700">
+                      {language === 'hi' ? 'मैं ' : 'I accept the '}
+                      <button
+                        type="button"
+                        onClick={() => setShowTerms(true)}
+                        className="text-primary-600 font-medium hover:underline"
+                      >
+                        {role === 'provider'
+                          ? (language === 'hi' ? 'प्रदाता नियम और शर्तें' : 'Provider Terms & Conditions')
+                          : (language === 'hi' ? 'उपयोगकर्ता नियम और शर्तें' : 'User Terms & Conditions')}
+                      </button>
+                      {language === 'hi' ? ' स्वीकार करता/करती हूं' : ''}
+                    </span>
+                  </label>
+                </div>
 
                 <div className="flex gap-3">
                   <button

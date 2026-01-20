@@ -3,6 +3,7 @@ package db
 import (
     "context"
     "errors"
+    "fmt"
     "time"
 
     "github.com/jackc/pgx/v5/pgxpool"
@@ -45,3 +46,17 @@ func Ping(ctx context.Context) error {
     return Pool.Ping(ctx)
 }
 
+// TableExists checks whether a table exists in the current database schema.
+// tableName should be provided without schema, e.g. "users".
+func TableExists(ctx context.Context, tableName string) (bool, error) {
+    if Pool == nil {
+        return false, fmt.Errorf("db pool is nil")
+    }
+    var regclass *string
+    // to_regclass returns NULL if the relation does not exist
+    err := Pool.QueryRow(ctx, `SELECT to_regclass('public.' || $1)`, tableName).Scan(&regclass)
+    if err != nil {
+        return false, err
+    }
+    return regclass != nil, nil
+}
